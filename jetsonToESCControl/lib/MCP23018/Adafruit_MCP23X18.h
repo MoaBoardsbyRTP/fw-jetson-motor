@@ -8,8 +8,7 @@
  * and only supports I2C (no SPI variant).
  */
 
-#ifndef __ADAFRUIT_MCP23X18_H__
-#define __ADAFRUIT_MCP23X18_H__
+#pragma once
 
 #include <Adafruit_MCP23XXX.h>
 
@@ -44,5 +43,3 @@ public:
   // Enable hardware address pins (HAEN bit in IOCON)
   void enableAddrPins();
 };
-
-#endif
