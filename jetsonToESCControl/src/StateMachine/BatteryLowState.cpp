@@ -15,3 +15,6 @@ void BatteryLowState::temperatureCrossedLimit(ControlCommand command) {
 
 void BatteryLowState::batteryLevelCrossedLimit(ControlCommand command) {
 }
+
+void BatteryLowState::timerExpired(ControlCommand command) {
+}

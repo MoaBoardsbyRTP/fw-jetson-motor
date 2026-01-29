@@ -10,4 +10,5 @@ public:
     void overcurrentDetected(ControlCommand command) override;
     void temperatureCrossedLimit(ControlCommand command) override;
     void batteryLevelCrossedLimit(ControlCommand command) override;
+    void timerExpired(ControlCommand command) override;
 };

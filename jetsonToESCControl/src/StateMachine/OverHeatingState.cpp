@@ -15,3 +15,6 @@ void OverHeatingState::temperatureCrossedLimit(ControlCommand command) {
 
 void OverHeatingState::batteryLevelCrossedLimit(ControlCommand command) {
 }
+
+void OverHeatingState::timerExpired(ControlCommand command) {
+}

@@ -11,4 +11,5 @@ public:
     virtual void overcurrentDetected(ControlCommand command) = 0;
     virtual void temperatureCrossedLimit(ControlCommand command) = 0;
     virtual void batteryLevelCrossedLimit(ControlCommand command) = 0;  
+    virtual void timerExpired(ControlCommand command) = 0;
 };

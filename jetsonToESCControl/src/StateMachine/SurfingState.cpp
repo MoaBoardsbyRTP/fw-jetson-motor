@@ -15,3 +15,6 @@ void SurfingState::temperatureCrossedLimit(ControlCommand command) {
 
 void SurfingState::batteryLevelCrossedLimit(ControlCommand command) {
 }
+
+void SurfingState::timerExpired(ControlCommand command) {
+}

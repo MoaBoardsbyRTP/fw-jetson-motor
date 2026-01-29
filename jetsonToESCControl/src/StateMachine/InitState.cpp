@@ -15,3 +15,6 @@ void InitState::temperatureCrossedLimit(ControlCommand command) {
 
 void InitState::batteryLevelCrossedLimit(ControlCommand command) {
 }
+
+void InitState::timerExpired(ControlCommand command) {
+}
