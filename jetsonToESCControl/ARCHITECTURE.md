@@ -4,6 +4,8 @@
 
 FreeRTOS-based architecture using the State Pattern for managing ESC control, sensor monitoring, and user input. Designed for extensibility to support future BLE control and WiFi configuration.
 
+**Implementation Status:** Phase 1 in progress - Core producer classes implemented, event queue architecture established.
+
 ---
 
 ## Target Hardware
@@ -18,24 +20,27 @@ FreeRTOS-based architecture using the State Pattern for managing ESC control, se
 ## Architecture Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Event Queue                              │
-│                  (ControlCommand + EventType)                   │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │
-        ┌───────────────────┼───────────────────┐
-        ▼                   ▼                   ▼
-┌───────────────┐   ┌───────────────┐   ┌───────────────┐
-│  IOTask       │   │  SensorTask   │   │  [Future]     │
-│  (MCP23018)   │   │  (Temp/Curr)  │   │  BLE/Web/etc  │
-└───────────────┘   └───────────────┘   └───────────────┘
-                            │
-                            ▼
-                ┌───────────────────────┐
-                │     ControlTask       │
-                │   MoaStateMachine     │
-                │   ESCController       │
-                └───────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           Event Queue                                    │
+│                    (ControlCommand: controlType + commandType + value)   │
+└───────────────────────────────┬─────────────────────────────────────────┘
+                                │
+    ┌───────────┬───────────────┼───────────────┬───────────────┐
+    ▼           ▼               ▼               ▼               ▼
+┌─────────┐ ┌─────────┐   ┌───────────┐   ┌───────────┐   ┌───────────┐
+│MoaTimer │ │MoaButton│   │MoaTemp    │   │MoaBatt    │   │MoaCurrent │
+│Control  │ │Control  │   │Control    │   │Control    │   │Control    │
+│(xTimer) │ │(MCP23018)│  │(DS18B20)  │   │(ADC)      │   │(ADC)      │
+└─────────┘ └─────────┘   └───────────┘   └───────────┘   └───────────┘
+                                │
+                                ▼
+                    ┌───────────────────────┐
+                    │     ControlTask       │
+                    │   MoaStateMachine     │
+                    │   ESCController       │
+                    │   MoaLedControl ◄─────┼── (Consumer)
+                    │   MoaFlashLog         │
+                    └───────────────────────┘
 ```
 
 ---
@@ -54,16 +59,25 @@ FreeRTOS-based architecture using the State Pattern for managing ESC control, se
 | **BatteryLowState** | Battery critical, ESC stopped |
 | **ConfigState** | [Future] WiFi AP + webserver for configuration |
 
-### Events
+### Events (ControlCommand Format)
 
-| EventType | Source | Description |
-|-----------|--------|-------------|
-| `EVT_BUTTON_CLICK` | IOTask, BLE | User button press |
-| `EVT_OVERCURRENT` | SensorTask | Current threshold crossed |
-| `EVT_TEMPERATURE_LIMIT` | SensorTask | Temperature threshold crossed |
-| `EVT_BATTERY_LIMIT` | SensorTask | Battery threshold crossed |
-| `EVT_THROTTLE_REQUEST` | [Future] BLE/Jetson | External throttle command |
-| `EVT_PARAM_CHANGE` | [Future] Web | Configuration parameter changed |
+All events use the unified `ControlCommand` struct:
+
+```cpp
+struct ControlCommand {
+    int controlType;   // Producer identifier (100-104)
+    int commandType;   // Event type or ID
+    int value;         // Measured value or event data
+};
+```
+
+| controlType | Producer | commandType | value |
+|-------------|----------|-------------|-------|
+| 100 | MoaTimer | Timer ID | 0 (reserved) |
+| 101 | MoaTempControl | CROSSED_ABOVE/BELOW | Temperature × 10 (°C) |
+| 102 | MoaBattControl | LEVEL_HIGH/MED/LOW | Voltage (mV) |
+| 103 | MoaCurrentControl | OVERCURRENT/NORMAL/REVERSE | Current × 10 (A) |
+| 104 | MoaButtonControl | BUTTON_STOP/25/50/75/100 | PRESS/LONG_PRESS |
 
 ---
 
@@ -71,18 +85,53 @@ FreeRTOS-based architecture using the State Pattern for managing ESC control, se
 
 | Task | Priority | Period | Responsibility |
 |------|----------|--------|----------------|
-| **SensorTask** | High | 50ms | Read ADC (current, battery), DS18B20 (temp), push threshold events |
-| **IOTask** | Medium | 20ms | Poll MCP23018 buttons, debounce, detect clicks, update LEDs |
-| **ControlTask** | Medium | Event-driven | Process event queue, run StateMachine, update ESCController ramp |
+| **SensorTask** | High | 50ms | Call `update()` on MoaTempControl, MoaBattControl, MoaCurrentControl |
+| **IOTask** | Medium | 20ms | Call `update()` on MoaButtonControl, MoaLedControl |
+| **ControlTask** | Medium | Event-driven | Process event queue, run StateMachine, update ESCController, call MoaFlashLog.update() |
 | **BLETask** | Medium | Event-driven | [Future] GATT server, BLE commands → events |
 | **WebTask** | Low | N/A | [Future] Config webserver (only in ConfigState) |
+
+### Task Integration Example
+
+```cpp
+// SensorTask (50ms period)
+void SensorTask(void* param) {
+    for (;;) {
+        tempControl.update();     // Pushes events on threshold crossing
+        battControl.update();     // Pushes events on level change
+        currentControl.update();  // Pushes events on overcurrent
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+
+// IOTask (20ms period)
+void IOTask(void* param) {
+    for (;;) {
+        buttonControl.update();   // Pushes events on button press/long-press
+        ledControl.update();      // Drives LED blink timing
+        vTaskDelay(pdMS_TO_TICKS(20));
+    }
+}
+
+// ControlTask (event-driven)
+void ControlTask(void* param) {
+    ControlCommand cmd;
+    for (;;) {
+        if (xQueueReceive(eventQueue, &cmd, portMAX_DELAY)) {
+            stateMachine.handleEvent(cmd);
+            flashLog.update();    // Periodic flush check
+        }
+    }
+}
+```
 
 ---
 
 ## Synchronization
 
-- **Event Queue:** Single FreeRTOS queue for all events → ControlTask
-- **I2C Mutex:** Protect I2C bus if multiple tasks access (MCP23018 + sensors)
+- **Event Queue:** Single FreeRTOS queue for all `ControlCommand` events → ControlTask
+- **MCP23018 Mutex:** `MoaMcpDevice` class provides mutex-protected I2C access for MoaButtonControl and MoaLedControl
+- **I2C Mutex:** [If needed] Additional mutex if other I2C devices share the bus
 - **Config Mutex:** [Future] Protect shared config struct for web access
 
 ---
@@ -91,19 +140,29 @@ FreeRTOS-based architecture using the State Pattern for managing ESC control, se
 
 ### Phase 1: Core (V1)
 
-- [ ] Define `ControlCommand` struct and `EventType` enum
+- [x] Define `ControlCommand` struct
+- [x] Implement MoaTimer (FreeRTOS xTimer wrapper with queue events)
+- [x] Implement MoaTempControl (DS18B20 with averaging, hysteresis, queue events)
+- [x] Implement MoaBattControl (ADC with averaging, thresholds, queue events)
+- [x] Implement MoaCurrentControl (Hall effect sensor, bidirectional, queue events)
+- [x] Implement MoaMcpDevice (thread-safe MCP23018 wrapper with mutex)
+- [x] Implement MoaButtonControl (debounce, long-press detection, queue events)
+- [x] Implement MoaLedControl (individual control, blink patterns, config mode indication)
+- [x] Implement MoaFlashLog (LittleFS circular buffer, 128 entries, JSON export)
 - [ ] Create FreeRTOS task stubs and event queue
-- [ ] Implement SensorTask (temperature, current, battery reads)
-- [ ] Implement IOTask (MCP23018 button polling, LED control)
+- [ ] Implement SensorTask (call producer update methods)
+- [ ] Implement IOTask (call button/LED update methods)
 - [ ] Implement ControlTask (event processing, StateMachine integration)
 - [ ] Wire ESCController to StateMachine (ramp control in SurfingState)
 - [ ] Implement state transitions and error states
 
 ### Phase 2: Refinement
 
-- [ ] Button debounce and click pattern detection (single, double, long)
-- [ ] LED feedback patterns per state
-- [ ] Tunable thresholds (hardcoded initially)
+- [x] Button debounce (configurable, default 50ms)
+- [x] Long-press detection (configurable, default 5s)
+- [x] LED blink patterns and config mode indication
+- [x] Flash-based event logging with JSON export
+- [ ] Tunable thresholds via configuration
 - [ ] Serial debug output / telemetry
 
 ### Phase 3: BLE Control (Future)
@@ -139,7 +198,8 @@ jetsonToESCControl/
 │   │   ├── OverCurrentState.h
 │   │   └── BatteryLowState.h
 │   ├── ControlCommand.h
-│   ├── EventTypes.h          [TODO]
+│   ├── PinMapping.h          # GPIO and MCP23018 pin definitions
+│   ├── Constants.h           # Hardware constants and default values
 │   ├── Tasks.h               [TODO]
 │   └── Config.h              [TODO]
 ├── src/
@@ -157,8 +217,17 @@ jetsonToESCControl/
 │   │   └── ControlTask.cpp
 │   └── main.cpp
 ├── lib/
-│   ├── ESCController/
-│   └── MCP23018/
+│   ├── ESCController/        # PWM ESC control with ramping
+│   ├── MCP23018/             # Adafruit MCP23X18 I2C driver
+│   ├── MoaTimer/             # FreeRTOS xTimer wrapper → queue events
+│   ├── MoaTempControl/       # DS18B20 temperature monitoring → queue events
+│   ├── MoaBattControl/       # Battery voltage monitoring → queue events
+│   ├── MoaCurrentControl/    # Hall effect current monitoring → queue events
+│   ├── MoaMcpDevice/         # Thread-safe MCP23018 wrapper with mutex
+│   ├── MoaButtonControl/     # Button input with debounce/long-press → queue events
+│   ├── MoaLedControl/        # LED output with blink patterns
+│   ├── MoaFlashLog/          # Flash-based event logging with JSON export
+│   └── TempControl/          # [Legacy] Original temperature control
 └── platformio.ini
 ```
 
@@ -170,7 +239,10 @@ jetsonToESCControl/
 2. **Single task owns state machine** — no mutex needed for state transitions
 3. **Event queue decouples producers/consumers** — easy to add new input sources
 4. **ConfigState is mutually exclusive** — WiFi/web only runs in dedicated mode
-5. **I2C protected by mutex** — safe concurrent access from multiple tasks
+5. **I2C protected by mutex** — MoaMcpDevice provides thread-safe access
+6. **Unified event format** — All producers use `ControlCommand` with consistent semantics
+7. **Producer classes are self-contained** — Each handles its own averaging, hysteresis, and thresholds
+8. **Critical events trigger immediate logging** — Overcurrent, overheat, errors flush to flash immediately
 
 ---
 
@@ -180,7 +252,23 @@ jetsonToESCControl/
 - BLE 5.0 only (no Classic Bluetooth)
 - WiFi + BLE coexistence possible but not needed if ConfigState is exclusive
 - Keep webserver minimal to conserve RAM
+- Flash logging uses LittleFS with 128-entry circular buffer (~1KB)
+- Long-press STOP button (configurable, default 5s) enters config mode
 
 ---
 
-*Last updated: 2026-01-29*
+## Producer Classes Summary
+
+| Class | Sensor/Source | Key Features |
+|-------|---------------|---------------|
+| **MoaTimer** | FreeRTOS xTimer | One-shot/periodic, timer ID in commandType |
+| **MoaTempControl** | DS18B20 | Averaging, hysteresis, above/below threshold events |
+| **MoaBattControl** | ADC + divider | Averaging, 3-level thresholds (HIGH/MED/LOW) |
+| **MoaCurrentControl** | ACS759-200B Hall | Bidirectional, averaging, overcurrent detection |
+| **MoaButtonControl** | MCP23018 Port A | Debounce, long-press, 5 buttons |
+| **MoaLedControl** | MCP23018 Port B | 5 LEDs, blink patterns, config mode indication |
+| **MoaFlashLog** | LittleFS | 128 entries, 1-min flush, JSON export |
+
+---
+
+*Last updated: 2026-01-30*

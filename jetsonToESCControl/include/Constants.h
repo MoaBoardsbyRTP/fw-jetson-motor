@@ -1,0 +1,197 @@
+/**
+ * @file Constants.h
+ * @brief Hardware constants and default configuration values
+ * @author Oscar Martinez
+ * @date 2025-01-30
+ * 
+ * This file contains hardware constants, sensor specifications, and default
+ * configuration values for the Moa ESC Controller. These are separate from
+ * pin mappings to allow easy tuning without modifying hardware definitions.
+ */
+
+#pragma once
+
+// =============================================================================
+// ADC Configuration
+// =============================================================================
+
+/**
+ * @brief ADC resolution in bits (ESP32-C3 default)
+ */
+#define ADC_RESOLUTION_BITS     12
+
+/**
+ * @brief ADC reference voltage (V)
+ */
+#define ADC_REFERENCE_VOLTAGE   3.3f
+
+// =============================================================================
+// Battery Monitoring Constants
+// =============================================================================
+
+/**
+ * @brief Battery voltage divider ratio
+ * Vbatt = Vadc * BATT_DIVIDER_RATIO
+ * Adjust based on actual resistor values (e.g., 100k/10k = 11.0)
+ */
+#define BATT_DIVIDER_RATIO      11.0f
+
+/**
+ * @brief Battery high threshold (V)
+ */
+#define BATT_THRESHOLD_HIGH     12.0f
+
+/**
+ * @brief Battery medium threshold (V)
+ */
+#define BATT_THRESHOLD_MEDIUM   10.5f
+
+/**
+ * @brief Battery low threshold (V)
+ */
+#define BATT_THRESHOLD_LOW      9.0f
+
+/**
+ * @brief Battery hysteresis (V)
+ */
+#define BATT_HYSTERESIS         0.3f
+
+/**
+ * @brief Battery averaging samples
+ */
+#define BATT_AVERAGING_SAMPLES  10
+
+// =============================================================================
+// Current Sensor Constants (ACS759-200B)
+// =============================================================================
+
+/**
+ * @brief ACS759-200B sensitivity (V/A)
+ * 6.6 mV/A = 0.0066 V/A
+ */
+#define CURRENT_SENSOR_SENSITIVITY  0.0066f
+
+/**
+ * @brief ACS759-200B zero current offset voltage (V)
+ * VCC/2 at 3.3V supply = 1.65V
+ */
+#define CURRENT_SENSOR_OFFSET   1.65f
+
+/**
+ * @brief Overcurrent threshold (A)
+ */
+#define CURRENT_THRESHOLD_OVERCURRENT   150.0f
+
+/**
+ * @brief Reverse overcurrent threshold (A)
+ */
+#define CURRENT_THRESHOLD_REVERSE       -150.0f
+
+/**
+ * @brief Current hysteresis (A)
+ */
+#define CURRENT_HYSTERESIS      5.0f
+
+/**
+ * @brief Current averaging samples
+ */
+#define CURRENT_AVERAGING_SAMPLES   10
+
+// =============================================================================
+// Temperature Sensor Constants (DS18B20)
+// =============================================================================
+
+/**
+ * @brief Temperature target threshold (°C)
+ */
+#define TEMP_THRESHOLD_TARGET   60.0f
+
+/**
+ * @brief Temperature hysteresis (°C)
+ */
+#define TEMP_HYSTERESIS         2.0f
+
+/**
+ * @brief Temperature averaging samples
+ */
+#define TEMP_AVERAGING_SAMPLES  5
+
+// =============================================================================
+// Button Configuration
+// =============================================================================
+
+/**
+ * @brief Button debounce time (ms)
+ */
+#define BUTTON_DEBOUNCE_MS      50
+
+/**
+ * @brief Long-press detection time (ms)
+ */
+#define BUTTON_LONG_PRESS_MS    5000
+
+// =============================================================================
+// LED Configuration
+// =============================================================================
+
+/**
+ * @brief Default LED blink period (ms)
+ */
+#define LED_BLINK_PERIOD_MS     500
+
+/**
+ * @brief Config mode blink period (ms) - faster for visibility
+ */
+#define LED_CONFIG_BLINK_MS     300
+
+// =============================================================================
+// Flash Logging Configuration
+// =============================================================================
+
+/**
+ * @brief Flash log flush interval (ms)
+ */
+#define LOG_FLUSH_INTERVAL_MS   60000
+
+/**
+ * @brief Maximum log entries
+ */
+#define LOG_MAX_ENTRIES         128
+
+// =============================================================================
+// Task Timing
+// =============================================================================
+
+/**
+ * @brief SensorTask period (ms)
+ */
+#define TASK_SENSOR_PERIOD_MS   50
+
+/**
+ * @brief IOTask period (ms)
+ */
+#define TASK_IO_PERIOD_MS       20
+
+// =============================================================================
+// ESC Configuration
+// =============================================================================
+
+/**
+ * @brief ESC PWM frequency (Hz)
+ */
+#define ESC_PWM_FREQUENCY       50
+
+/**
+ * @brief ESC minimum pulse width (µs)
+ */
+#define ESC_PULSE_MIN_US        1000
+
+/**
+ * @brief ESC maximum pulse width (µs)
+ */
+#define ESC_PULSE_MAX_US        2000
+
+/**
+ * @brief ESC ramp rate (% per second)
+ */
+#define ESC_RAMP_RATE           25.0f
