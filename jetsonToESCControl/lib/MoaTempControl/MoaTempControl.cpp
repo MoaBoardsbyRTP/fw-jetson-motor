@@ -1,20 +1,22 @@
 /**
- * @file TempControl.cpp
- * @brief Implementation of the TempControl class
+ * @file MoaTempControl.cpp
+ * @brief Implementation of the MoaTempControl class
  * @author Oscar Martinez
  * @date 2025-01-28
  */
 
-#include "TempControl.h"
+#include "MoaTempControl.h"
 
-TempControl::TempControl(uint8_t pin, uint8_t numSamples)
-    : _oneWire(pin)
+MoaTempControl::MoaTempControl(QueueHandle_t eventQueue, uint8_t pin, uint8_t sensorId, 
+                               uint8_t numSamples)
+    : _eventQueue(eventQueue)
+    , _sensorId(sensorId)
+    , _oneWire(pin)
     , _sensors(&_oneWire)
     , _targetTemp(0.0f)
     , _currentTemp(0.0f)
     , _hysteresis(0.0f)
-    , _callback(nullptr)
-    , _state(TempState::BELOW_TARGET)
+    , _state(MoaTempState::BELOW_TARGET)
     , _samples(nullptr)
     , _numSamples(0)
     , _sampleIndex(0)
@@ -24,18 +26,18 @@ TempControl::TempControl(uint8_t pin, uint8_t numSamples)
     setNumSamples(numSamples);
 }
 
-TempControl::~TempControl() {
+MoaTempControl::~MoaTempControl() {
     if (_samples != nullptr) {
         delete[] _samples;
         _samples = nullptr;
     }
 }
 
-void TempControl::begin() {
+void MoaTempControl::begin() {
     _sensors.begin();
 }
 
-void TempControl::update() {
+void MoaTempControl::update() {
     _sensors.requestTemperatures();
     _currentTemp = _sensors.getTempCByIndex(0);
     
@@ -56,64 +58,60 @@ void TempControl::update() {
     float upperThreshold = _targetTemp;
     float lowerThreshold = _targetTemp - _hysteresis;
     
-    // Check for state transitions and fire callback
-    if (_state == TempState::BELOW_TARGET && _averagedTemp >= upperThreshold) {
+    // Check for state transitions and push event
+    if (_state == MoaTempState::BELOW_TARGET && _averagedTemp >= upperThreshold) {
         // Crossed UP above target
-        _state = TempState::ABOVE_TARGET;
-        if (_callback != nullptr) {
-            _callback(_averagedTemp, true);
-        }
-    } else if (_state == TempState::ABOVE_TARGET && _averagedTemp <= lowerThreshold) {
+        _state = MoaTempState::ABOVE_TARGET;
+        pushTempEvent(COMMAND_TEMP_CROSSED_ABOVE);
+    } else if (_state == MoaTempState::ABOVE_TARGET && _averagedTemp <= lowerThreshold) {
         // Crossed DOWN below (target - hysteresis)
-        _state = TempState::BELOW_TARGET;
-        if (_callback != nullptr) {
-            _callback(_averagedTemp, false);
-        }
+        _state = MoaTempState::BELOW_TARGET;
+        pushTempEvent(COMMAND_TEMP_CROSSED_BELOW);
     }
 }
 
-void TempControl::setTargetTemp(float temp) {
+void MoaTempControl::setTargetTemp(float temp) {
     _targetTemp = temp;
 }
 
-float TempControl::getTargetTemp() const {
+float MoaTempControl::getTargetTemp() const {
     return _targetTemp;
 }
 
-void TempControl::setHysteresis(float hysteresis) {
+void MoaTempControl::setHysteresis(float hysteresis) {
     _hysteresis = (hysteresis > 0.0f) ? hysteresis : 0.0f;
 }
 
-float TempControl::getHysteresis() const {
+float MoaTempControl::getHysteresis() const {
     return _hysteresis;
 }
 
-void TempControl::setCallback(void (*callback)(float, bool)) {
-    _callback = callback;
+uint8_t MoaTempControl::getSensorId() const {
+    return _sensorId;
 }
 
-float TempControl::getCurrentTemp() const {
+float MoaTempControl::getCurrentTemp() const {
     return _currentTemp;
 }
 
-float TempControl::getAveragedTemp() const {
+float MoaTempControl::getAveragedTemp() const {
     return _averagedTemp;
 }
 
-TempState TempControl::getState() const {
+MoaTempState MoaTempControl::getState() const {
     return _state;
 }
 
-bool TempControl::isAveragingReady() const {
+bool MoaTempControl::isAveragingReady() const {
     return _sampleCount >= _numSamples;
 }
 
-void TempControl::setNumSamples(uint8_t numSamples) {
+void MoaTempControl::setNumSamples(uint8_t numSamples) {
     // Clamp to valid range
     if (numSamples < 1) {
         numSamples = 1;
-    } else if (numSamples > TEMP_CONTROL_MAX_SAMPLES) {
-        numSamples = TEMP_CONTROL_MAX_SAMPLES;
+    } else if (numSamples > MOA_TEMP_MAX_SAMPLES) {
+        numSamples = MOA_TEMP_MAX_SAMPLES;
     }
     
     // Free existing buffer if any
@@ -136,11 +134,11 @@ void TempControl::setNumSamples(uint8_t numSamples) {
     }
 }
 
-uint8_t TempControl::getNumSamples() const {
+uint8_t MoaTempControl::getNumSamples() const {
     return _numSamples;
 }
 
-void TempControl::addSample(float temp) {
+void MoaTempControl::addSample(float temp) {
     if (_samples == nullptr) {
         return;
     }
@@ -158,7 +156,7 @@ void TempControl::addSample(float temp) {
     _averagedTemp = calculateAverage();
 }
 
-float TempControl::calculateAverage() const {
+float MoaTempControl::calculateAverage() const {
     if (_sampleCount == 0 || _samples == nullptr) {
         return 0.0f;
     }
@@ -169,4 +167,17 @@ float TempControl::calculateAverage() const {
     }
     
     return sum / static_cast<float>(_sampleCount);
+}
+
+void MoaTempControl::pushTempEvent(int commandType) {
+    if (_eventQueue == nullptr) {
+        return;
+    }
+
+    ControlCommand cmd;
+    cmd.controlType = CONTROL_TYPE_TEMPERATURE;
+    cmd.commandType = commandType;
+    cmd.value = _sensorId;
+
+    xQueueSend(_eventQueue, &cmd, 0);  // Don't block if queue is full
 }

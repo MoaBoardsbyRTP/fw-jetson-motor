@@ -1,8 +1,13 @@
 /**
- * @file TempControl.h
+ * @file MoaTempControl.h
  * @brief Temperature control class with hysteresis and averaging for ESP32
  * @author Oscar Martinez
  * @date 2025-01-28
+ * 
+ * This library provides temperature monitoring using Dallas DS18B20 sensors
+ * that integrates with the Moa event queue system. When temperature crosses
+ * thresholds, it pushes an event to the specified FreeRTOS queue for processing
+ * by ControlTask.
  */
 
 #pragma once
@@ -10,50 +15,97 @@
 #include <Arduino.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+#include "ControlCommand.h"
 
 /**
  * @brief Default number of samples for temperature averaging
  */
-#define TEMP_CONTROL_DEFAULT_SAMPLES 10
+#define MOA_TEMP_DEFAULT_SAMPLES 10
 
 /**
  * @brief Maximum number of samples for temperature averaging
  */
-#define TEMP_CONTROL_MAX_SAMPLES 32
+#define MOA_TEMP_MAX_SAMPLES 32
+
+/**
+ * @brief Control type identifier for temperature events
+ */
+#define CONTROL_TYPE_TEMPERATURE 101
+
+/**
+ * @brief Command type for temperature crossed above target
+ */
+#define COMMAND_TEMP_CROSSED_ABOVE 1
+
+/**
+ * @brief Command type for temperature crossed below threshold (target - hysteresis)
+ */
+#define COMMAND_TEMP_CROSSED_BELOW 2
 
 /**
  * @brief Temperature state enumeration for hysteresis control
  */
-enum class TempState {
+enum class MoaTempState {
     BELOW_TARGET,  ///< Temperature is below (target - hysteresis)
     ABOVE_TARGET   ///< Temperature is above target
 };
 
 /**
- * @brief Temperature control class with hysteresis-based callbacks and averaging
+ * @brief Temperature control class with hysteresis-based events and averaging
  * 
- * This class provides temperature monitoring using Dallas DS18B20 sensors with:
+ * MoaTempControl provides temperature monitoring using Dallas DS18B20 sensors with:
  * - Configurable moving average filtering
  * - Hysteresis-based threshold detection
- * - Callbacks fired when temperature crosses target (up) or target-hysteresis (down)
+ * - Event-driven integration via FreeRTOS queue
  * 
- * @note The callback is fired when:
- *       - Temperature crosses UP above the target temperature
- *       - Temperature crosses DOWN below (target - hysteresis)
+ * When temperature crosses thresholds, it automatically pushes a ControlCommand
+ * event to the configured queue.
+ * 
+ * @note Events are pushed when:
+ *       - Temperature crosses UP above the target temperature (COMMAND_TEMP_CROSSED_ABOVE)
+ *       - Temperature crosses DOWN below (target - hysteresis) (COMMAND_TEMP_CROSSED_BELOW)
+ * 
+ * ## Usage Example
+ * @code
+ * QueueHandle_t eventQueue = xQueueCreate(10, sizeof(ControlCommand));
+ * MoaTempControl tempSensor(eventQueue, TEMP_SENSOR_PIN, 1);  // Sensor ID = 1
+ * 
+ * tempSensor.setTargetTemp(50.0f);
+ * tempSensor.setHysteresis(5.0f);  // Lower threshold = 45°C
+ * tempSensor.begin();
+ * 
+ * // In SensorTask, call periodically:
+ * tempSensor.update();
+ * 
+ * // In ControlTask, handle the event:
+ * // if (cmd.controlType == CONTROL_TYPE_TEMPERATURE) {
+ * //     if (cmd.commandType == COMMAND_TEMP_CROSSED_ABOVE) {
+ * //         stateMachine.temperatureCrossedLimit(cmd);
+ * //     }
+ * // }
+ * @endcode
  */
-class TempControl {
+class MoaTempControl {
 public:
     /**
-     * @brief Construct a new TempControl object
+     * @brief Construct a new MoaTempControl object
+     * 
+     * @param eventQueue FreeRTOS queue handle to push temperature events to
      * @param pin GPIO pin connected to the DS18B20 data line
-     * @param numSamples Number of samples for moving average (default: TEMP_CONTROL_DEFAULT_SAMPLES)
+     * @param sensorId Unique identifier for this sensor (used in event value field)
+     * @param numSamples Number of samples for moving average (default: MOA_TEMP_DEFAULT_SAMPLES)
+     * 
+     * @note sensorId should be unique per sensor instance to distinguish events.
      */
-    TempControl(uint8_t pin, uint8_t numSamples = TEMP_CONTROL_DEFAULT_SAMPLES);
+    MoaTempControl(QueueHandle_t eventQueue, uint8_t pin, uint8_t sensorId, 
+                   uint8_t numSamples = MOA_TEMP_DEFAULT_SAMPLES);
 
     /**
      * @brief Destructor - frees allocated sample buffer
      */
-    ~TempControl();
+    ~MoaTempControl();
 
     /**
      * @brief Initialize the temperature sensor
@@ -67,9 +119,9 @@ public:
      * This method:
      * 1. Requests a new temperature reading from the sensor
      * 2. Updates the moving average
-     * 3. Checks if temperature crossed thresholds and fires callback if needed
+     * 3. Checks if temperature crossed thresholds and pushes event if needed
      * 
-     * @note Should be called periodically (e.g., in loop())
+     * @note Should be called periodically (e.g., from SensorTask)
      */
     void update();
 
@@ -89,7 +141,7 @@ public:
      * @brief Set the hysteresis value
      * 
      * The hysteresis defines the lower threshold as (target - hysteresis).
-     * Callback fires when crossing down below this threshold.
+     * Event fires when crossing down below this threshold.
      * 
      * @param hysteresis Hysteresis value in Celsius (must be positive)
      */
@@ -102,17 +154,11 @@ public:
     float getHysteresis() const;
 
     /**
-     * @brief Set the callback function for temperature threshold events
+     * @brief Get the sensor's unique identifier
      * 
-     * The callback receives the current averaged temperature when:
-     * - Temperature crosses UP above target
-     * - Temperature crosses DOWN below (target - hysteresis)
-     * 
-     * @param callback Function pointer with signature void(float temperature, bool isAboveTarget)
-     *                 - temperature: Current averaged temperature in Celsius
-     *                 - isAboveTarget: true if crossed above target, false if crossed below threshold
+     * @return uint8_t Sensor ID (as set in constructor)
      */
-    void setCallback(void (*callback)(float, bool));
+    uint8_t getSensorId() const;
 
     /**
      * @brief Get the current raw temperature reading
@@ -128,9 +174,9 @@ public:
 
     /**
      * @brief Get the current temperature state
-     * @return TempState Current state (BELOW_TARGET or ABOVE_TARGET)
+     * @return MoaTempState Current state (BELOW_TARGET or ABOVE_TARGET)
      */
-    TempState getState() const;
+    MoaTempState getState() const;
 
     /**
      * @brief Check if the sample buffer is full (averaging is valid)
@@ -140,7 +186,7 @@ public:
 
     /**
      * @brief Set the number of samples for averaging
-     * @param numSamples Number of samples (1 to TEMP_CONTROL_MAX_SAMPLES)
+     * @param numSamples Number of samples (1 to MOA_TEMP_MAX_SAMPLES)
      * @note This resets the sample buffer
      */
     void setNumSamples(uint8_t numSamples);
@@ -152,13 +198,14 @@ public:
     uint8_t getNumSamples() const;
 
 private:
+    QueueHandle_t _eventQueue;             ///< Queue to push events to
+    uint8_t _sensorId;                     ///< Unique sensor identifier
     OneWire _oneWire;                      ///< OneWire bus instance
     DallasTemperature _sensors;            ///< Dallas temperature sensor interface
     float _targetTemp;                     ///< Target temperature threshold
     float _currentTemp;                    ///< Current raw temperature reading
     float _hysteresis;                     ///< Hysteresis value for lower threshold
-    void (*_callback)(float, bool);        ///< Callback function pointer
-    TempState _state;                      ///< Current temperature state
+    MoaTempState _state;                   ///< Current temperature state
     
     float* _samples;                       ///< Circular buffer for temperature samples
     uint8_t _numSamples;                   ///< Number of samples for averaging
@@ -177,4 +224,11 @@ private:
      * @return float Averaged temperature
      */
     float calculateAverage() const;
+
+    /**
+     * @brief Push a temperature event to the queue
+     * 
+     * @param commandType The command type (COMMAND_TEMP_CROSSED_ABOVE or COMMAND_TEMP_CROSSED_BELOW)
+     */
+    void pushTempEvent(int commandType);
 };
