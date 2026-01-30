@@ -7,10 +7,9 @@
 
 #include "MoaBattControl.h"
 
-MoaBattControl::MoaBattControl(QueueHandle_t eventQueue, uint8_t adcPin, uint8_t sensorId,
+MoaBattControl::MoaBattControl(QueueHandle_t eventQueue, uint8_t adcPin,
                                uint8_t numSamples)
     : _eventQueue(eventQueue)
-    , _sensorId(sensorId)
     , _adcPin(adcPin)
     , _adcResolution(12)
     , _dividerRatio(1.0f)
@@ -144,10 +143,6 @@ float MoaBattControl::getHysteresis() const {
     return _hysteresis;
 }
 
-uint8_t MoaBattControl::getSensorId() const {
-    return _sensorId;
-}
-
 uint16_t MoaBattControl::getRawAdc() const {
     return _rawAdc;
 }
@@ -257,7 +252,8 @@ void MoaBattControl::pushBattEvent(int commandType) {
     ControlCommand cmd;
     cmd.controlType = CONTROL_TYPE_BATTERY;
     cmd.commandType = commandType;
-    cmd.value = _sensorId;
+    // Send voltage as int in millivolts (e.g., 3.85V = 3850)
+    cmd.value = static_cast<int>(_averagedVoltage * 1000.0f);
 
     xQueueSend(_eventQueue, &cmd, 0);  // Don't block if queue is full
 }

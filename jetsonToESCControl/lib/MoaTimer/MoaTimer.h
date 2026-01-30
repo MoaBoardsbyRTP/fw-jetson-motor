@@ -23,11 +23,6 @@
 #define CONTROL_TYPE_TIMER 100
 
 /**
- * @brief Command type for timer expired events
- */
-#define COMMAND_TIMER_EXPIRED 1
-
-/**
  * @brief Maximum number of MoaTimer instances supported
  * @note Used for static callback routing
  */
@@ -44,17 +39,25 @@
  *       The callback only pushes an event to the queue; actual handling
  *       should occur in ControlTask to maintain thread safety.
  * 
+ * @note The timer ID is sent in cmd.commandType to distinguish between multiple
+ *       timer instances. cmd.value is available for future use (e.g., elapsed time).
+ * 
  * ## Usage Example
  * @code
  * QueueHandle_t eventQueue = xQueueCreate(10, sizeof(ControlCommand));
- * MoaTimer fullThrottleTimer(eventQueue, 1);  // Timer ID = 1
+ * MoaTimer fullThrottleTimer(eventQueue, TIMER_ID_FULL_THROTTLE);
+ * MoaTimer cooldownTimer(eventQueue, TIMER_ID_COOLDOWN);
  * 
  * // Start a 5-second one-shot timer
  * fullThrottleTimer.start(5000);
  * 
  * // In ControlTask, handle the event:
- * // if (cmd.controlType == CONTROL_TYPE_TIMER && cmd.value == 1) {
- * //     stateMachine.timerExpired();
+ * // if (cmd.controlType == CONTROL_TYPE_TIMER) {
+ * //     if (cmd.commandType == TIMER_ID_FULL_THROTTLE) {
+ * //         // Full throttle timer expired
+ * //     } else if (cmd.commandType == TIMER_ID_COOLDOWN) {
+ * //         // Cooldown timer expired
+ * //     }
  * // }
  * @endcode
  */
@@ -64,7 +67,7 @@ public:
      * @brief Construct a new MoaTimer object
      * 
      * @param eventQueue FreeRTOS queue handle to push timer events to
-     * @param timerId Unique identifier for this timer (used in event value field)
+     * @param timerId Unique identifier for this timer (used in event commandType field)
      * @param name Optional name for debugging (max 16 chars, default: "MoaTimer")
      * 
      * @note The timer is created but not started. Call start() to begin timing.

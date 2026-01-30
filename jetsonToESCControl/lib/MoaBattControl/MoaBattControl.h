@@ -81,7 +81,7 @@ enum class MoaBattLevel {
  * ## Usage Example
  * @code
  * QueueHandle_t eventQueue = xQueueCreate(10, sizeof(ControlCommand));
- * MoaBattControl battery(eventQueue, ADC_PIN, 1);  // Sensor ID = 1
+ * MoaBattControl battery(eventQueue, ADC_PIN);
  * 
  * battery.setDividerRatio(3.128f);      // 100k/47k divider
  * battery.setReferenceVoltage(3.3f);    // ESP32 ADC reference
@@ -94,6 +94,7 @@ enum class MoaBattLevel {
  * 
  * // In ControlTask, handle the event:
  * // if (cmd.controlType == CONTROL_TYPE_BATTERY) {
+ * //     float voltage = cmd.value / 1000.0f;  // Voltage in V (mV for precision)
  * //     stateMachine.batteryLevelCrossedLimit(cmd);
  * // }
  * @endcode
@@ -105,12 +106,9 @@ public:
      * 
      * @param eventQueue FreeRTOS queue handle to push battery events to
      * @param adcPin ADC pin connected to the voltage divider output
-     * @param sensorId Unique identifier for this sensor (used in event value field)
      * @param numSamples Number of samples for moving average (default: MOA_BATT_DEFAULT_SAMPLES)
-     * 
-     * @note sensorId should be unique per sensor instance to distinguish events.
      */
-    MoaBattControl(QueueHandle_t eventQueue, uint8_t adcPin, uint8_t sensorId,
+    MoaBattControl(QueueHandle_t eventQueue, uint8_t adcPin,
                    uint8_t numSamples = MOA_BATT_DEFAULT_SAMPLES);
 
     /**
@@ -212,12 +210,6 @@ public:
     float getHysteresis() const;
 
     /**
-     * @brief Get the sensor's unique identifier
-     * @return uint8_t Sensor ID (as set in constructor)
-     */
-    uint8_t getSensorId() const;
-
-    /**
      * @brief Get the current raw ADC reading
      * @return uint16_t Raw ADC value (0-4095 for 12-bit)
      */
@@ -274,7 +266,6 @@ public:
 
 private:
     QueueHandle_t _eventQueue;         ///< Queue to push events to
-    uint8_t _sensorId;                 ///< Unique sensor identifier
     uint8_t _adcPin;                   ///< ADC pin number
     uint8_t _adcResolution;            ///< ADC resolution in bits
     float _dividerRatio;               ///< Voltage divider ratio

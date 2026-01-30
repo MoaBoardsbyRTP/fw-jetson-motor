@@ -7,10 +7,9 @@
 
 #include "MoaTempControl.h"
 
-MoaTempControl::MoaTempControl(QueueHandle_t eventQueue, uint8_t pin, uint8_t sensorId, 
+MoaTempControl::MoaTempControl(QueueHandle_t eventQueue, uint8_t pin,
                                uint8_t numSamples)
     : _eventQueue(eventQueue)
-    , _sensorId(sensorId)
     , _oneWire(pin)
     , _sensors(&_oneWire)
     , _targetTemp(0.0f)
@@ -84,10 +83,6 @@ void MoaTempControl::setHysteresis(float hysteresis) {
 
 float MoaTempControl::getHysteresis() const {
     return _hysteresis;
-}
-
-uint8_t MoaTempControl::getSensorId() const {
-    return _sensorId;
 }
 
 float MoaTempControl::getCurrentTemp() const {
@@ -177,7 +172,8 @@ void MoaTempControl::pushTempEvent(int commandType) {
     ControlCommand cmd;
     cmd.controlType = CONTROL_TYPE_TEMPERATURE;
     cmd.commandType = commandType;
-    cmd.value = _sensorId;
+    // Send temperature as int (x10 for one decimal precision, e.g., 25.5°C = 255)
+    cmd.value = static_cast<int>(_averagedTemp * 10.0f);
 
     xQueueSend(_eventQueue, &cmd, 0);  // Don't block if queue is full
 }

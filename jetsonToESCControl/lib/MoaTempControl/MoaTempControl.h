@@ -70,7 +70,7 @@ enum class MoaTempState {
  * ## Usage Example
  * @code
  * QueueHandle_t eventQueue = xQueueCreate(10, sizeof(ControlCommand));
- * MoaTempControl tempSensor(eventQueue, TEMP_SENSOR_PIN, 1);  // Sensor ID = 1
+ * MoaTempControl tempSensor(eventQueue, TEMP_SENSOR_PIN);
  * 
  * tempSensor.setTargetTemp(50.0f);
  * tempSensor.setHysteresis(5.0f);  // Lower threshold = 45°C
@@ -81,9 +81,8 @@ enum class MoaTempState {
  * 
  * // In ControlTask, handle the event:
  * // if (cmd.controlType == CONTROL_TYPE_TEMPERATURE) {
- * //     if (cmd.commandType == COMMAND_TEMP_CROSSED_ABOVE) {
- * //         stateMachine.temperatureCrossedLimit(cmd);
- * //     }
+ * //     float temp = cmd.value / 10.0f;  // Temperature in °C (x10 for precision)
+ * //     stateMachine.temperatureCrossedLimit(cmd);
  * // }
  * @endcode
  */
@@ -94,12 +93,9 @@ public:
      * 
      * @param eventQueue FreeRTOS queue handle to push temperature events to
      * @param pin GPIO pin connected to the DS18B20 data line
-     * @param sensorId Unique identifier for this sensor (used in event value field)
      * @param numSamples Number of samples for moving average (default: MOA_TEMP_DEFAULT_SAMPLES)
-     * 
-     * @note sensorId should be unique per sensor instance to distinguish events.
      */
-    MoaTempControl(QueueHandle_t eventQueue, uint8_t pin, uint8_t sensorId, 
+    MoaTempControl(QueueHandle_t eventQueue, uint8_t pin,
                    uint8_t numSamples = MOA_TEMP_DEFAULT_SAMPLES);
 
     /**
@@ -154,13 +150,6 @@ public:
     float getHysteresis() const;
 
     /**
-     * @brief Get the sensor's unique identifier
-     * 
-     * @return uint8_t Sensor ID (as set in constructor)
-     */
-    uint8_t getSensorId() const;
-
-    /**
      * @brief Get the current raw temperature reading
      * @return float Current temperature in Celsius (not averaged)
      */
@@ -199,7 +188,6 @@ public:
 
 private:
     QueueHandle_t _eventQueue;             ///< Queue to push events to
-    uint8_t _sensorId;                     ///< Unique sensor identifier
     OneWire _oneWire;                      ///< OneWire bus instance
     DallasTemperature _sensors;            ///< Dallas temperature sensor interface
     float _targetTemp;                     ///< Target temperature threshold

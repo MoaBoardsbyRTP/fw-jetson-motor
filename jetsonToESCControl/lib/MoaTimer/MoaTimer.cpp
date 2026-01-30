@@ -129,8 +129,8 @@ void MoaTimer::pushTimerEvent() {
 
     ControlCommand cmd;
     cmd.controlType = CONTROL_TYPE_TIMER;
-    cmd.commandType = COMMAND_TIMER_EXPIRED;
-    cmd.value = _timerId;
+    cmd.commandType = _timerId;  // Timer ID in commandType for routing
+    cmd.value = 0;               // Available for future use
 
     // Use xQueueSendFromISR if called from ISR context, but FreeRTOS timer
     // callbacks run in the timer service task, so regular xQueueSend is fine
