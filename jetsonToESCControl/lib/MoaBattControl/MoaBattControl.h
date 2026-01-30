@@ -51,9 +51,9 @@
  * @brief Battery level state enumeration
  */
 enum class MoaBattLevel {
-    LOW,     ///< Battery below low threshold (critical)
-    MEDIUM,  ///< Battery between low and high thresholds
-    HIGH     ///< Battery above high threshold (fully charged)
+    BATT_LOW,     ///< Battery below low threshold (critical)
+    BATT_MEDIUM,  ///< Battery between low and high thresholds
+    BATT_HIGH     ///< Battery above high threshold (fully charged)
 };
 
 /**

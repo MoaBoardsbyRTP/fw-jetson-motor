@@ -4,7 +4,7 @@
 
 FreeRTOS-based architecture using the State Pattern for managing ESC control, sensor monitoring, and user input. Designed for extensibility to support future BLE control and WiFi configuration.
 
-**Implementation Status:** Phase 1 in progress - Core producer classes implemented, event queue architecture established.
+**Implementation Status:** Phase 1 complete - Core producer classes, FreeRTOS tasks, and event queue architecture implemented.
 
 ---
 
@@ -20,27 +20,47 @@ FreeRTOS-based architecture using the State Pattern for managing ESC control, se
 ## Architecture Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           Event Queue                                    │
-│                    (ControlCommand: controlType + commandType + value)   │
-└───────────────────────────────┬─────────────────────────────────────────┘
-                                │
-    ┌───────────┬───────────────┼───────────────┬───────────────┐
-    ▼           ▼               ▼               ▼               ▼
-┌─────────┐ ┌─────────┐   ┌───────────┐   ┌───────────┐   ┌───────────┐
-│MoaTimer │ │MoaButton│   │MoaTemp    │   │MoaBatt    │   │MoaCurrent │
-│Control  │ │Control  │   │Control    │   │Control    │   │Control    │
-│(xTimer) │ │(MCP23018)│  │(DS18B20)  │   │(ADC)      │   │(ADC)      │
-└─────────┘ └─────────┘   └───────────┘   └───────────┘   └───────────┘
-                                │
-                                ▼
-                    ┌───────────────────────┐
-                    │     ControlTask       │
-                    │   MoaStateMachine     │
-                    │   ESCController       │
-                    │   MoaLedControl ◄─────┼── (Consumer)
-                    │   MoaFlashLog         │
-                    └───────────────────────┘
+                              ┌─────────────────┐
+                              │   main.cpp      │
+                              │ mainUnit.begin()│
+                              └────────┬────────┘
+                                       │
+                              ┌────────▼────────┐
+                              │  MoaMainUnit    │
+                              │ (owns all hw)   │
+                              └────────┬────────┘
+                                       │
+        ┌──────────────────────────────┼──────────────────────────────┐
+        │                              │                              │
+        ▼                              ▼                              ▼
+┌───────────────┐            ┌─────────────────┐            ┌─────────────────┐
+│  SensorTask   │            │    IOTask       │            │  ControlTask    │
+│   (50ms)      │            │    (20ms)       │            │  (event-driven) │
+│               │            │                 │            │                 │
+│ TempControl   │            │ ButtonControl   │            │ StateMachine    │
+│ BattControl   │            │ LedControl      │            │ Manager         │
+│ CurrentControl│            │                 │            │                 │
+└───────┬───────┘            └────────┬────────┘            └────────┬────────┘
+        │                             │                              │
+        └─────────────────────────────┼──────────────────────────────┘
+                                      ▼
+                    ┌─────────────────────────────────┐
+                    │          Event Queue            │
+                    │  (ControlCommand: type+cmd+val) │
+                    └─────────────────┬───────────────┘
+                                      │
+                                      ▼
+                    ┌─────────────────────────────────┐
+                    │   MoaStateMachineManager        │
+                    │   - Routes events by type       │
+                    │   - Updates MoaDevicesManager   │
+                    │   - Logs to MoaFlashLog         │
+                    └─────────────────┬───────────────┘
+                                      │
+                    ┌─────────────────▼───────────────┐
+                    │      MoaDevicesManager          │
+                    │   (Output facade: LEDs, ESC)    │
+                    └─────────────────────────────────┘
 ```
 
 ---
@@ -149,10 +169,11 @@ void ControlTask(void* param) {
 - [x] Implement MoaButtonControl (debounce, long-press detection, queue events)
 - [x] Implement MoaLedControl (individual control, blink patterns, config mode indication)
 - [x] Implement MoaFlashLog (LittleFS circular buffer, 128 entries, JSON export)
-- [ ] Create FreeRTOS task stubs and event queue
-- [ ] Implement SensorTask (call producer update methods)
-- [ ] Implement IOTask (call button/LED update methods)
-- [ ] Implement ControlTask (event processing, StateMachine integration)
+- [x] Create MoaMainUnit (central coordinator, owns all hardware)
+- [x] Create MoaDevicesManager (output facade: LEDs, ESC, logging)
+- [x] Create MoaStateMachineManager (event router)
+- [x] Create FreeRTOS tasks (SensorTask, IOTask, ControlTask)
+- [x] Create event queue and task integration
 - [ ] Wire ESCController to StateMachine (ramp control in SurfingState)
 - [ ] Implement state transitions and error states
 
@@ -197,10 +218,12 @@ jetsonToESCControl/
 │   │   ├── OverHeatingState.h
 │   │   ├── OverCurrentState.h
 │   │   └── BatteryLowState.h
-│   ├── ControlCommand.h
+│   ├── MoaMainUnit.h         # Central coordinator
+│   ├── MoaDevicesManager.h   # Output facade (LEDs, ESC, log)
+│   ├── MoaStateMachineManager.h  # Event router
+│   ├── Tasks.h               # FreeRTOS task declarations
 │   ├── PinMapping.h          # GPIO and MCP23018 pin definitions
 │   ├── Constants.h           # Hardware constants and default values
-│   ├── Tasks.h               [TODO]
 │   └── Config.h              [TODO]
 ├── src/
 │   ├── StateMachine/
@@ -211,11 +234,14 @@ jetsonToESCControl/
 │   │   ├── OverHeatingState.cpp
 │   │   ├── OverCurrentState.cpp
 │   │   └── BatteryLowState.cpp
-│   ├── Tasks/                [TODO]
-│   │   ├── SensorTask.cpp
-│   │   ├── IOTask.cpp
-│   │   └── ControlTask.cpp
-│   └── main.cpp
+│   ├── Tasks/
+│   │   ├── SensorTask.cpp    # Sensor producer updates
+│   │   ├── IOTask.cpp        # Button/LED updates
+│   │   └── ControlTask.cpp   # Event queue processing
+│   ├── MoaMainUnit.cpp       # Central coordinator implementation
+│   ├── MoaDevicesManager.cpp # Output facade implementation
+│   ├── MoaStateMachineManager.cpp  # Event router implementation
+│   └── main.cpp              # Ultra-clean entry point
 ├── lib/
 │   ├── ESCController/        # PWM ESC control with ramping
 │   ├── MCP23018/             # Adafruit MCP23X18 I2C driver
@@ -227,6 +253,7 @@ jetsonToESCControl/
 │   ├── MoaButtonControl/     # Button input with debounce/long-press → queue events
 │   ├── MoaLedControl/        # LED output with blink patterns
 │   ├── MoaFlashLog/          # Flash-based event logging with JSON export
+│   ├── MoaTypes/             # Shared types (ControlCommand)
 │   └── TempControl/          # [Legacy] Original temperature control
 └── platformio.ini
 ```
@@ -243,6 +270,8 @@ jetsonToESCControl/
 6. **Unified event format** — All producers use `ControlCommand` with consistent semantics
 7. **Producer classes are self-contained** — Each handles its own averaging, hysteresis, and thresholds
 8. **Critical events trigger immediate logging** — Overcurrent, overheat, errors flush to flash immediately
+9. **MoaMainUnit owns everything** — Single coordinator class keeps main.cpp ultra-clean
+10. **RTPBuit-inspired pattern** — DevicesManager facade + StateMachineManager router
 
 ---
 

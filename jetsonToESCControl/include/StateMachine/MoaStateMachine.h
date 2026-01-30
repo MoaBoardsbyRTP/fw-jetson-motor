@@ -16,7 +16,7 @@ public:
     void overcurrentDetected(ControlCommand command);
     void temperatureCrossedLimit(ControlCommand command);
     void batteryLevelCrossedLimit(ControlCommand command);
-    void timerExpired();
+    void timerExpired(ControlCommand command);
     void setState(MoaState* state);
     MoaState* getInitState();
     MoaState* getIdleState();

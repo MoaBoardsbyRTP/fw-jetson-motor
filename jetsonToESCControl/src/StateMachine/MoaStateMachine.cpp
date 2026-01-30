@@ -33,6 +33,10 @@ void MoaStateMachine::batteryLevelCrossedLimit(ControlCommand command){
     _state->batteryLevelCrossedLimit(command);
 }
 
+void MoaStateMachine::timerExpired(ControlCommand command){
+    _state->timerExpired(command);
+}
+
 void MoaStateMachine::setState(MoaState* state){
     _state = state;
 }

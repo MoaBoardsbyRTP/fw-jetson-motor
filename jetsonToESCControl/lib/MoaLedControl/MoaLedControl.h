@@ -81,7 +81,7 @@ enum MoaLedIndex {
  * leds.setOvercurrentLed(false);
  * 
  * // Battery level display
- * leds.setBatteryLevel(MoaBattLevel::MEDIUM);
+ * leds.setBatteryLevel(MoaBattLevel::BATT_MEDIUM);
  * 
  * // Blink a single LED
  * leds.startBlink(LED_INDEX_TEMP, 250);  // Fast blink

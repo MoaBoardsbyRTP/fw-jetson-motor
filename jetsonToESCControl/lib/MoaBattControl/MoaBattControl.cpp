@@ -19,7 +19,7 @@ MoaBattControl::MoaBattControl(QueueHandle_t eventQueue, uint8_t adcPin,
     , _hysteresis(0.1f)
     , _rawAdc(0)
     , _currentVoltage(0.0f)
-    , _level(MoaBattLevel::MEDIUM)
+    , _level(MoaBattLevel::BATT_MEDIUM)
     , _samples(nullptr)
     , _numSamples(0)
     , _sampleIndex(0)
@@ -63,26 +63,26 @@ void MoaBattControl::update() {
     MoaBattLevel previousLevel = _level;
     
     switch (_level) {
-        case MoaBattLevel::LOW:
+        case MoaBattLevel::BATT_LOW:
             // From LOW, can only go to MEDIUM (crossing up above low threshold)
             if (_averagedVoltage >= lowThreshUp) {
-                _level = MoaBattLevel::MEDIUM;
+                _level = MoaBattLevel::BATT_MEDIUM;
             }
             break;
             
-        case MoaBattLevel::MEDIUM:
+        case MoaBattLevel::BATT_MEDIUM:
             // From MEDIUM, can go to LOW or HIGH
             if (_averagedVoltage <= lowThreshDown) {
-                _level = MoaBattLevel::LOW;
+                _level = MoaBattLevel::BATT_LOW;
             } else if (_averagedVoltage >= highThreshUp) {
-                _level = MoaBattLevel::HIGH;
+                _level = MoaBattLevel::BATT_HIGH;
             }
             break;
             
-        case MoaBattLevel::HIGH:
+        case MoaBattLevel::BATT_HIGH:
             // From HIGH, can only go to MEDIUM (crossing down below high threshold)
             if (_averagedVoltage <= highThreshDown) {
-                _level = MoaBattLevel::MEDIUM;
+                _level = MoaBattLevel::BATT_MEDIUM;
             }
             break;
     }
@@ -90,13 +90,13 @@ void MoaBattControl::update() {
     // Push event if level changed
     if (_level != previousLevel) {
         switch (_level) {
-            case MoaBattLevel::LOW:
+            case MoaBattLevel::BATT_LOW:
                 pushBattEvent(COMMAND_BATT_LEVEL_LOW);
                 break;
-            case MoaBattLevel::MEDIUM:
+            case MoaBattLevel::BATT_MEDIUM:
                 pushBattEvent(COMMAND_BATT_LEVEL_MEDIUM);
                 break;
-            case MoaBattLevel::HIGH:
+            case MoaBattLevel::BATT_HIGH:
                 pushBattEvent(COMMAND_BATT_LEVEL_HIGH);
                 break;
         }
