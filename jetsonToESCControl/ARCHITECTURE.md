@@ -4,7 +4,7 @@
 
 FreeRTOS-based architecture using the State Pattern for managing ESC control, sensor monitoring, and user input. Designed for extensibility to support future BLE control and WiFi configuration.
 
-**Implementation Status:** Phase 1 complete - Core producer classes, FreeRTOS tasks, and event queue architecture implemented.
+**Implementation Status:** Phase 1 complete - Architecture implemented, project reorganized to match RTPBuit pattern. Ready for state machine wiring.
 
 ---
 
@@ -158,7 +158,7 @@ void ControlTask(void* param) {
 
 ## Implementation Phases
 
-### Phase 1: Core (V1)
+### Phase 1: Core (V1) - COMPLETE ✅
 
 - [x] Define `ControlCommand` struct
 - [x] Implement MoaTimer (FreeRTOS xTimer wrapper with queue events)
@@ -174,8 +174,10 @@ void ControlTask(void* param) {
 - [x] Create MoaStateMachineManager (event router)
 - [x] Create FreeRTOS tasks (SensorTask, IOTask, ControlTask)
 - [x] Create event queue and task integration
-- [ ] Wire ESCController to StateMachine (ramp control in SurfingState)
-- [ ] Implement state transitions and error states
+- [x] Reorganize project structure to match RTPBuit pattern
+- [x] Fix build system (include paths, LittleFS dependency)
+- [ ] **NEXT:** Wire ESCController to StateMachine (ramp control in SurfingState)
+- [ ] **NEXT:** Implement state transitions and error states
 
 ### Phase 2: Refinement
 
@@ -209,6 +211,7 @@ void ControlTask(void* param) {
 ```
 jetsonToESCControl/
 ├── include/
+│   ├── ControlCommand.h      # Unified event structure
 │   ├── StateMachine/
 │   │   ├── MoaState.h
 │   │   ├── MoaStateMachine.h
@@ -218,13 +221,26 @@ jetsonToESCControl/
 │   │   ├── OverHeatingState.h
 │   │   ├── OverCurrentState.h
 │   │   └── BatteryLowState.h
-│   ├── MoaMainUnit.h         # Central coordinator
-│   ├── MoaDevicesManager.h   # Output facade (LEDs, ESC, log)
-│   ├── MoaStateMachineManager.h  # Event router
-│   ├── Tasks.h               # FreeRTOS task declarations
-│   ├── PinMapping.h          # GPIO and MCP23018 pin definitions
-│   ├── Constants.h           # Hardware constants and default values
-│   └── Config.h              [TODO]
+│   ├── Devices/
+│   │   ├── MoaTempControl.h       # DS18B20 temperature monitoring
+│   │   ├── MoaBattControl.h       # Battery voltage monitoring
+│   │   ├── MoaCurrentControl.h    # Hall effect current monitoring
+│   │   ├── MoaButtonControl.h     # Button input with debounce/long-press
+│   │   ├── MoaLedControl.h        # LED output with blink patterns
+│   │   ├── MoaFlashLog.h          # Flash-based event logging
+│   │   ├── MoaMcpDevice.h         # Thread-safe MCP23018 wrapper
+│   │   ├── ESCController.h        # PWM ESC control with ramping
+│   │   └── Adafruit_MCP23X18.h    # MCP23018 driver (copied from lib)
+│   ├── Helpers/
+│   │   ├── MoaMainUnit.h          # Central coordinator
+│   │   ├── MoaDevicesManager.h    # Output facade (LEDs, ESC, log)
+│   │   ├── MoaStateMachineManager.h  # Event router
+│   │   └── MoaTimer.h             # FreeRTOS xTimer wrapper
+│   ├── Tasks/
+│   │   └── Tasks.h                # FreeRTOS task declarations
+│   ├── PinMapping.h              # GPIO and MCP23018 pin definitions
+│   ├── Constants.h               # Hardware constants and default values
+│   └── Config.h                  [TODO]
 ├── src/
 │   ├── StateMachine/
 │   │   ├── MoaStateMachine.cpp
@@ -234,27 +250,29 @@ jetsonToESCControl/
 │   │   ├── OverHeatingState.cpp
 │   │   ├── OverCurrentState.cpp
 │   │   └── BatteryLowState.cpp
+│   ├── Devices/
+│   │   ├── MoaTempControl.cpp
+│   │   ├── MoaBattControl.cpp
+│   │   ├── MoaCurrentControl.cpp
+│   │   ├── MoaButtonControl.cpp
+│   │   ├── MoaLedControl.cpp
+│   │   ├── MoaFlashLog.cpp
+│   │   ├── MoaMcpDevice.cpp
+│   │   ├── ESCController.cpp
+│   │   └── Adafruit_MCP23X18.cpp
+│   ├── Helpers/
+│   │   ├── MoaMainUnit.cpp
+│   │   ├── MoaDevicesManager.cpp
+│   │   ├── MoaStateMachineManager.cpp
+│   │   └── MoaTimer.cpp
 │   ├── Tasks/
-│   │   ├── SensorTask.cpp    # Sensor producer updates
-│   │   ├── IOTask.cpp        # Button/LED updates
-│   │   └── ControlTask.cpp   # Event queue processing
-│   ├── MoaMainUnit.cpp       # Central coordinator implementation
-│   ├── MoaDevicesManager.cpp # Output facade implementation
-│   ├── MoaStateMachineManager.cpp  # Event router implementation
-│   └── main.cpp              # Ultra-clean entry point
+│   │   ├── SensorTask.cpp         # Sensor producer updates
+│   │   ├── IOTask.cpp             # Button/LED updates
+│   │   └── ControlTask.cpp        # Event queue processing
+│   └── main.cpp                   # Ultra-clean entry point
 ├── lib/
-│   ├── ESCController/        # PWM ESC control with ramping
-│   ├── MCP23018/             # Adafruit MCP23X18 I2C driver
-│   ├── MoaTimer/             # FreeRTOS xTimer wrapper → queue events
-│   ├── MoaTempControl/       # DS18B20 temperature monitoring → queue events
-│   ├── MoaBattControl/       # Battery voltage monitoring → queue events
-│   ├── MoaCurrentControl/    # Hall effect current monitoring → queue events
-│   ├── MoaMcpDevice/         # Thread-safe MCP23018 wrapper with mutex
-│   ├── MoaButtonControl/     # Button input with debounce/long-press → queue events
-│   ├── MoaLedControl/        # LED output with blink patterns
-│   ├── MoaFlashLog/          # Flash-based event logging with JSON export
-│   ├── MoaTypes/             # Shared types (ControlCommand)
-│   └── TempControl/          # [Legacy] Original temperature control
+│   ├── MCP23018/                  # Adafruit MCP23X18 base library
+│   └── TempControl/               # [Legacy] Original temperature control
 └── platformio.ini
 ```
 
@@ -300,4 +318,31 @@ jetsonToESCControl/
 
 ---
 
-*Last updated: 2026-01-30*
+*Last updated: 2026-01-31*
+
+---
+
+## Current Status & Next Steps
+
+### ✅ Completed
+- **Architecture**: FreeRTOS event-driven system with unified ControlCommand events
+- **Project Structure**: Reorganized to match RTPBuit pattern (include/Devices/, src/Devices/)
+- **All Producer Classes**: Temperature, Battery, Current, Button, LED, Timer, Flash logging
+- **Core Infrastructure**: MoaMainUnit, MoaDevicesManager, MoaStateMachineManager
+- **FreeRTOS Tasks**: SensorTask, IOTask, ControlTask with proper priorities
+- **Build System**: PlatformIO configuration with correct include paths and dependencies
+- **Compilation**: Project builds successfully with all components integrated
+
+### 🎯 Next Steps for V1 Working Version
+1. **Wire ESCController to StateMachine**: Implement throttle control in SurfingState
+2. **Implement State Transitions**: Connect all states with proper event handling
+3. **Add Error State Logic**: OverCurrent, OverHeating, BatteryLow behaviors
+4. **Test Basic Operation**: Verify button input → state change → ESC output
+5. **Add Serial Debug**: Optional telemetry for debugging
+
+### 📋 Implementation Priority
+1. **SurfingState ESC Control** (button → throttle level)
+2. **State Machine Wiring** (event routing between states)
+3. **Safety Features** (overcurrent/overheat shutdown)
+4. **User Testing** (basic button control validation)
+5. **Debug Output** (serial monitoring for development)
