@@ -7,6 +7,7 @@
  * Ultra-clean main file. All initialization and task management
  * is handled by MoaMainUnit.
  */
+#ifndef UNIT_TEST
 
 #include <Arduino.h>
 #include "MoaMainUnit.h"
@@ -20,3 +21,5 @@ void setup() {
 void loop() {
     // Empty - FreeRTOS tasks handle everything
 }
+
+#endif

@@ -192,3 +192,14 @@ int main() {
     
     return UNITY_END();
 }
+
+
+void setup() {
+    delay(1000);
+    Serial.begin(115200);
+    main();
+}
+
+void loop() {
+    // Empty
+}

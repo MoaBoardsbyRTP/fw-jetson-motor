@@ -7,6 +7,7 @@ MoaBattControl* battControl;
 void setUp(void) {
     testQueue = xQueueCreate(10, sizeof(ControlCommand));
     battControl = new MoaBattControl(testQueue, 1); // GPIO1 for battery ADC
+    Serial.begin(115200);
 }
 
 void tearDown(void) {
@@ -120,4 +121,15 @@ int main() {
     RUN_TEST(test_battery_divider_ratio);
     
     return UNITY_END();
+}
+
+
+void setup() {
+    delay(1000);
+    Serial.begin(115200);
+    main();
+}
+
+void loop() {
+    // Empty
 }
