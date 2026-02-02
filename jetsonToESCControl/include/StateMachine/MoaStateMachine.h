@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MoaState.h"
+#include "MoaDevicesManager.h"
 
 class MoaStateMachine{
     MoaState* _state;
@@ -11,7 +12,7 @@ class MoaStateMachine{
     MoaState* _overCurrentState;
     MoaState* _batteryLowState;
 public:
-    MoaStateMachine();
+    MoaStateMachine(MoaDevicesManager& devices);
     void buttonClick(ControlCommand command);
     void overcurrentDetected(ControlCommand command);
     void temperatureCrossedLimit(ControlCommand command);

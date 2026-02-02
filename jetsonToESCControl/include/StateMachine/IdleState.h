@@ -5,7 +5,7 @@
 class IdleState : public MoaState{
     MoaStateMachine& _moaMachine;
 public:
-    IdleState(MoaStateMachine& moaMachine);
+    IdleState(MoaStateMachine& moaMachine, MoaDevicesManager& devices);
     void buttonClick(ControlCommand command) override;
     void overcurrentDetected(ControlCommand command) override;
     void temperatureCrossedLimit(ControlCommand command) override;

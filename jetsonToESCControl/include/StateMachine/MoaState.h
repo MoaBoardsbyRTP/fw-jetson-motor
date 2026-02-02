@@ -1,11 +1,13 @@
 #pragma once
 
 #include "ControlCommand.h"
+#include "MoaDevicesManager.h"
 
 class MoaState{
 protected:
+    MoaDevicesManager& _devices;
 public:
-    MoaState(){}
+    MoaState(MoaDevicesManager& devices) : _devices(devices) {}
     virtual ~MoaState(){}
     virtual void buttonClick(ControlCommand command) = 0;
     virtual void overcurrentDetected(ControlCommand command) = 0;

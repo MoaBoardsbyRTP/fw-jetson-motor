@@ -9,7 +9,7 @@
 #include "MoaButtonControl.h"  // For COMMAND_BUTTON_* defines
 
 MoaStateMachineManager::MoaStateMachineManager(MoaDevicesManager& devices)
-    : _stateMachine()
+    : _stateMachine(devices)
     , _devices(devices)
 {
 }

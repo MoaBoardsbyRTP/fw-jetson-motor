@@ -1,7 +1,7 @@
 #include "Arduino.h"
 #include "OverHeatingState.h"
 
-OverHeatingState::OverHeatingState(MoaStateMachine& moaMachine) : _moaMachine(moaMachine) {
+OverHeatingState::OverHeatingState(MoaStateMachine& moaMachine, MoaDevicesManager& devices) : MoaState(devices), _moaMachine(moaMachine){
 }
 
 void OverHeatingState::buttonClick(ControlCommand command) {

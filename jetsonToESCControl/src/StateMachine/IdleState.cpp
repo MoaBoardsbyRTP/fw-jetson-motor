@@ -1,7 +1,7 @@
 #include "Arduino.h"
 #include "IdleState.h"
 
-IdleState::IdleState(MoaStateMachine& moaMachine) : _moaMachine(moaMachine) {
+IdleState::IdleState(MoaStateMachine& moaMachine, MoaDevicesManager& devices) : MoaState(devices), _moaMachine(moaMachine) {
 }
 
 void IdleState::buttonClick(ControlCommand command) {

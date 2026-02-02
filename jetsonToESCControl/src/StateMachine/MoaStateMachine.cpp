@@ -7,13 +7,13 @@
 #include "OverCurrentState.h"
 #include "BatteryLowState.h"
 
-MoaStateMachine::MoaStateMachine(){
-    _initState = new InitState(*this);
-    _idleState = new IdleState(*this);
-    _surfingState = new SurfingState(*this);
-    _overHeatingState = new OverHeatingState(*this);
-    _overCurrentState = new OverCurrentState(*this);
-    _batteryLowState = new BatteryLowState(*this);
+MoaStateMachine::MoaStateMachine(MoaDevicesManager& devices){
+    _initState = new InitState(*this, devices);
+    _idleState = new IdleState(*this, devices);
+    _surfingState = new SurfingState(*this, devices);
+    _overHeatingState = new OverHeatingState(*this, devices);
+    _overCurrentState = new OverCurrentState(*this, devices);
+    _batteryLowState = new BatteryLowState(*this, devices);
     _state = _initState;
 }
 

@@ -1,7 +1,7 @@
 #include "Arduino.h"
 #include "InitState.h"
 
-InitState::InitState(MoaStateMachine& moaMachine) : _moaMachine(moaMachine) {
+InitState::InitState(MoaStateMachine& moaMachine, MoaDevicesManager& devices) : MoaState(devices), _moaMachine(moaMachine) {
 }
 
 void InitState::buttonClick(ControlCommand command) {

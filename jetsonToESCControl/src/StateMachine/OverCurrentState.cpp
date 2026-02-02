@@ -1,7 +1,7 @@
 #include "Arduino.h"
 #include "OverCurrentState.h"
 
-OverCurrentState::OverCurrentState(MoaStateMachine& moaMachine) : _moaMachine(moaMachine) {
+OverCurrentState::OverCurrentState(MoaStateMachine& moaMachine, MoaDevicesManager& devices) : MoaState(devices), _moaMachine(moaMachine){
 }
 
 void OverCurrentState::buttonClick(ControlCommand command) {

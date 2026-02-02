@@ -1,7 +1,7 @@
 #include "Arduino.h"
 #include "SurfingState.h"
 
-SurfingState::SurfingState(MoaStateMachine& moaMachine) : _moaMachine(moaMachine) {
+SurfingState::SurfingState(MoaStateMachine& moaMachine, MoaDevicesManager& devices) : MoaState(devices), _moaMachine(moaMachine){
 }
 
 void SurfingState::buttonClick(ControlCommand command) {

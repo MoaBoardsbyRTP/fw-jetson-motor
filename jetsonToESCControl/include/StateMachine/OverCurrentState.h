@@ -5,7 +5,7 @@
 class OverCurrentState : public MoaState{
     MoaStateMachine& _moaMachine;
 public:
-    OverCurrentState(MoaStateMachine& moaMachine);
+    OverCurrentState(MoaStateMachine& moaMachine, MoaDevicesManager& devices);
     void buttonClick(ControlCommand command) override;
     void overcurrentDetected(ControlCommand command) override;
     void temperatureCrossedLimit(ControlCommand command) override;

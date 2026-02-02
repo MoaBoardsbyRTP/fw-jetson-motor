@@ -5,7 +5,7 @@
 class InitState : public MoaState{
     MoaStateMachine& _moaMachine;
 public:
-    InitState(MoaStateMachine& moaMachine);
+    InitState(MoaStateMachine& moaMachine, MoaDevicesManager& devices);
     void buttonClick(ControlCommand command) override;
     void overcurrentDetected(ControlCommand command) override;
     void temperatureCrossedLimit(ControlCommand command) override;

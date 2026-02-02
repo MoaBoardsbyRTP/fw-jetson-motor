@@ -1,7 +1,7 @@
 #include "Arduino.h"
 #include "BatteryLowState.h"
 
-BatteryLowState::BatteryLowState(MoaStateMachine& moaMachine) : _moaMachine(moaMachine) {
+BatteryLowState::BatteryLowState(MoaStateMachine& moaMachine, MoaDevicesManager& devices) : MoaState(devices), _moaMachine(moaMachine) {
 }
 
 void BatteryLowState::buttonClick(ControlCommand command) {
