@@ -19,7 +19,6 @@ void fadeLedTask(void *pvParameters){
 		if (brightness <= 10 || brightness >= 4070) 
 			direction = -direction;
 		brightness += direction;
-		Serial.printf("Brightness: %d\n", brightness);
 	}
 }
 
