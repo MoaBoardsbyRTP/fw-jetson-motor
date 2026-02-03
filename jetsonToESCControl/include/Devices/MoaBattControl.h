@@ -16,6 +16,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "ControlCommand.h"
+#include "StatsReading.h"
 
 /**
  * @brief Default number of samples for battery voltage averaging
@@ -264,8 +265,15 @@ public:
      */
     uint8_t getAdcResolution() const;
 
+    /**
+     * @brief Set the stats queue for telemetry
+     * @param statsQueue FreeRTOS queue handle for stats readings
+     */
+    void setStatsQueue(QueueHandle_t statsQueue);
+
 private:
     QueueHandle_t _eventQueue;         ///< Queue to push events to
+    QueueHandle_t _statsQueue;         ///< Queue to push stats readings to
     uint8_t _adcPin;                   ///< ADC pin number
     uint8_t _adcResolution;            ///< ADC resolution in bits
     float _dividerRatio;               ///< Voltage divider ratio
@@ -307,4 +315,9 @@ private:
      * @param commandType The command type (COMMAND_BATT_LEVEL_*)
      */
     void pushBattEvent(int commandType);
+
+    /**
+     * @brief Push a stats reading to the stats queue
+     */
+    void pushStatsReading();
 };

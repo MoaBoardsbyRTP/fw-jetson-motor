@@ -18,6 +18,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "ControlCommand.h"
+#include "StatsReading.h"
 
 /**
  * @brief Default number of samples for temperature averaging
@@ -186,8 +187,15 @@ public:
      */
     uint8_t getNumSamples() const;
 
+    /**
+     * @brief Set the stats queue for telemetry
+     * @param statsQueue FreeRTOS queue handle for stats readings
+     */
+    void setStatsQueue(QueueHandle_t statsQueue);
+
 private:
     QueueHandle_t _eventQueue;             ///< Queue to push events to
+    QueueHandle_t _statsQueue;             ///< Queue to push stats readings to
     OneWire _oneWire;                      ///< OneWire bus instance
     DallasTemperature _sensors;            ///< Dallas temperature sensor interface
     float _targetTemp;                     ///< Target temperature threshold
@@ -219,4 +227,9 @@ private:
      * @param commandType The command type (COMMAND_TEMP_CROSSED_ABOVE or COMMAND_TEMP_CROSSED_BELOW)
      */
     void pushTempEvent(int commandType);
+
+    /**
+     * @brief Push a stats reading to the stats queue
+     */
+    void pushStatsReading();
 };

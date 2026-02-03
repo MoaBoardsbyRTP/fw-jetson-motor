@@ -32,6 +32,8 @@
 
 #include "MoaDevicesManager.h"
 #include "MoaStateMachineManager.h"
+#include "MoaStatsAggregator.h"
+#include "StatsReading.h"
 
 /**
  * @brief Event queue size (number of ControlCommand items)
@@ -39,11 +41,17 @@
 #define EVENT_QUEUE_SIZE 16
 
 /**
+ * @brief Stats queue size (number of StatsReading items)
+ */
+#define STATS_QUEUE_SIZE 8
+
+/**
  * @brief Task stack sizes in bytes
  */
 #define TASK_STACK_SENSOR   4096
 #define TASK_STACK_IO       4096
 #define TASK_STACK_CONTROL  4096
+#define TASK_STACK_STATS    2048
 
 /**
  * @brief Task priorities (higher = more priority)
@@ -51,6 +59,7 @@
 #define TASK_PRIORITY_SENSOR    3
 #define TASK_PRIORITY_IO        2
 #define TASK_PRIORITY_CONTROL   2
+#define TASK_PRIORITY_STATS     1
 
 /**
  * @brief Central coordinator for Moa ESC Controller
@@ -146,12 +155,26 @@ public:
      */
     MoaFlashLog& getFlashLog();
 
+    /**
+     * @brief Get the stats queue handle
+     * @return QueueHandle_t Stats queue
+     */
+    QueueHandle_t getStatsQueue();
+
+    /**
+     * @brief Get reference to stats aggregator
+     * @return MoaStatsAggregator& Stats aggregator
+     */
+    MoaStatsAggregator& getStatsAggregator();
+
 private:
     // === FreeRTOS resources ===
     QueueHandle_t _eventQueue;
+    QueueHandle_t _statsQueue;
     TaskHandle_t _sensorTaskHandle;
     TaskHandle_t _ioTaskHandle;
     TaskHandle_t _controlTaskHandle;
+    TaskHandle_t _statsTaskHandle;
 
     // === Hardware instances ===
     MoaMcpDevice _mcpDevice;
@@ -166,6 +189,7 @@ private:
     // === Managers ===
     MoaDevicesManager _devicesManager;
     MoaStateMachineManager _stateMachineManager;
+    MoaStatsAggregator _statsAggregator;
 
     /**
      * @brief Initialize I2C bus

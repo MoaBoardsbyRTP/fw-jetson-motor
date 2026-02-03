@@ -44,3 +44,13 @@ void IOTask(void* pvParameters);
  * @param pvParameters Pointer to MoaMainUnit instance
  */
 void ControlTask(void* pvParameters);
+
+/**
+ * @brief Stats aggregation task (event-driven)
+ * 
+ * Blocks on stats queue, updates the StatsAggregator with
+ * continuous sensor readings for telemetry consumers.
+ * 
+ * @param pvParameters Pointer to MoaMainUnit instance
+ */
+void StatsTask(void* pvParameters);

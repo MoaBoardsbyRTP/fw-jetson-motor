@@ -10,6 +10,7 @@
 MoaTempControl::MoaTempControl(QueueHandle_t eventQueue, uint8_t pin,
                                uint8_t numSamples)
     : _eventQueue(eventQueue)
+    , _statsQueue(nullptr)
     , _oneWire(pin)
     , _sensors(&_oneWire)
     , _targetTemp(0.0f)
@@ -47,6 +48,9 @@ void MoaTempControl::update() {
     
     // Add sample to circular buffer and update average
     addSample(_currentTemp);
+    
+    // Push stats reading to telemetry queue
+    pushStatsReading();
     
     // Only check thresholds if we have enough samples for valid averaging
     if (!isAveragingReady()) {
@@ -176,4 +180,21 @@ void MoaTempControl::pushTempEvent(int commandType) {
     cmd.value = static_cast<int>(_averagedTemp * 10.0f);
 
     xQueueSend(_eventQueue, &cmd, 0);  // Don't block if queue is full
+}
+
+void MoaTempControl::setStatsQueue(QueueHandle_t statsQueue) {
+    _statsQueue = statsQueue;
+}
+
+void MoaTempControl::pushStatsReading() {
+    if (_statsQueue == nullptr) {
+        return;
+    }
+
+    StatsReading reading;
+    reading.statsType = STATS_TYPE_TEMPERATURE;
+    reading.value = static_cast<int32_t>(_averagedTemp * 10.0f);
+    reading.timestamp = millis();
+
+    xQueueSend(_statsQueue, &reading, 0);  // Don't block if queue is full
 }

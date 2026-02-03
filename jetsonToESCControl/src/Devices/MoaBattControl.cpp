@@ -10,6 +10,7 @@
 MoaBattControl::MoaBattControl(QueueHandle_t eventQueue, uint8_t adcPin,
                                uint8_t numSamples)
     : _eventQueue(eventQueue)
+    , _statsQueue(nullptr)
     , _adcPin(adcPin)
     , _adcResolution(12)
     , _dividerRatio(1.0f)
@@ -47,6 +48,9 @@ void MoaBattControl::update() {
     
     // Add sample to circular buffer and update average
     addSample(_currentVoltage);
+    
+    // Push stats reading to telemetry queue
+    pushStatsReading();
     
     // Only check thresholds if we have enough samples for valid averaging
     if (!isAveragingReady()) {
@@ -256,4 +260,21 @@ void MoaBattControl::pushBattEvent(int commandType) {
     cmd.value = static_cast<int>(_averagedVoltage * 1000.0f);
 
     xQueueSend(_eventQueue, &cmd, 0);  // Don't block if queue is full
+}
+
+void MoaBattControl::setStatsQueue(QueueHandle_t statsQueue) {
+    _statsQueue = statsQueue;
+}
+
+void MoaBattControl::pushStatsReading() {
+    if (_statsQueue == nullptr) {
+        return;
+    }
+
+    StatsReading reading;
+    reading.statsType = STATS_TYPE_BATTERY;
+    reading.value = static_cast<int32_t>(_averagedVoltage * 1000.0f);  // millivolts
+    reading.timestamp = millis();
+
+    xQueueSend(_statsQueue, &reading, 0);  // Don't block if queue is full
 }

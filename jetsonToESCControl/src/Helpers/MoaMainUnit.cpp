@@ -10,9 +10,11 @@
 
 MoaMainUnit::MoaMainUnit()
     : _eventQueue(nullptr)
+    , _statsQueue(nullptr)
     , _sensorTaskHandle(nullptr)
     , _ioTaskHandle(nullptr)
     , _controlTaskHandle(nullptr)
+    , _statsTaskHandle(nullptr)
     , _mcpDevice(MCP23018_I2C_ADDR)
     , _tempControl(_eventQueue, PIN_TEMP_SENSE)
     , _battControl(_eventQueue, PIN_BATT_LEVEL_SENSE)
@@ -42,9 +44,20 @@ void MoaMainUnit::begin() {
         return;
     }
 
-    // Update queue handle in producers (they were constructed with nullptr)
-    // Note: This requires adding setEventQueue() methods to producers
-    // For now, we'll reinitialize them after queue creation
+    // Create stats queue for telemetry
+    _statsQueue = xQueueCreate(STATS_QUEUE_SIZE, sizeof(StatsReading));
+    if (_statsQueue == nullptr) {
+        Serial.println("ERROR: Failed to create stats queue!");
+        return;
+    }
+
+    // Initialize stats aggregator
+    _statsAggregator.begin();
+
+    // Set stats queue on sensor producers
+    _tempControl.setStatsQueue(_statsQueue);
+    _battControl.setStatsQueue(_statsQueue);
+    _currentControl.setStatsQueue(_statsQueue);
 
     // Initialize I2C
     initI2C();
@@ -97,6 +110,14 @@ MoaStateMachineManager& MoaMainUnit::getStateMachineManager() {
 
 MoaFlashLog& MoaMainUnit::getFlashLog() {
     return _flashLog;
+}
+
+QueueHandle_t MoaMainUnit::getStatsQueue() {
+    return _statsQueue;
+}
+
+MoaStatsAggregator& MoaMainUnit::getStatsAggregator() {
+    return _statsAggregator;
 }
 
 void MoaMainUnit::initI2C() {
@@ -209,4 +230,16 @@ void MoaMainUnit::createTasks() {
         0
     );
     Serial.println("ControlTask created.");
+
+    // Create StatsTask
+    xTaskCreatePinnedToCore(
+        StatsTask,
+        "StatsTask",
+        TASK_STACK_STATS,
+        this,
+        TASK_PRIORITY_STATS,
+        &_statsTaskHandle,
+        0
+    );
+    Serial.println("StatsTask created.");
 }

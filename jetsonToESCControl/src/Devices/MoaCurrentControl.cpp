@@ -10,6 +10,7 @@
 MoaCurrentControl::MoaCurrentControl(QueueHandle_t eventQueue, uint8_t adcPin,
                                      uint8_t numSamples)
     : _eventQueue(eventQueue)
+    , _statsQueue(nullptr)
     , _adcPin(adcPin)
     , _adcResolution(12)
     , _sensitivity(0.0066f)           // ACS759-200B: 6.6 mV/A
@@ -49,6 +50,9 @@ void MoaCurrentControl::update() {
     
     // Add sample to circular buffer and update average
     addSample(_currentReading);
+    
+    // Push stats reading to telemetry queue
+    pushStatsReading();
     
     // Only check thresholds if we have enough samples for valid averaging
     if (!isAveragingReady()) {
@@ -272,4 +276,21 @@ void MoaCurrentControl::pushCurrentEvent(int commandType) {
     cmd.value = static_cast<int>(_averagedCurrent * 10.0f);
 
     xQueueSend(_eventQueue, &cmd, 0);  // Don't block if queue is full
+}
+
+void MoaCurrentControl::setStatsQueue(QueueHandle_t statsQueue) {
+    _statsQueue = statsQueue;
+}
+
+void MoaCurrentControl::pushStatsReading() {
+    if (_statsQueue == nullptr) {
+        return;
+    }
+
+    StatsReading reading;
+    reading.statsType = STATS_TYPE_CURRENT;
+    reading.value = static_cast<int32_t>(_averagedCurrent * 10.0f);  // x10 for precision
+    reading.timestamp = millis();
+
+    xQueueSend(_statsQueue, &reading, 0);  // Don't block if queue is full
 }
