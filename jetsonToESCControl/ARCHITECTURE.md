@@ -4,7 +4,7 @@
 
 FreeRTOS-based architecture using the State Pattern for managing ESC control, sensor monitoring, and user input. Designed for extensibility to support future BLE control and WiFi configuration.
 
-**Implementation Status:** Phase 1 complete - Architecture implemented, project reorganized to match RTPBuit pattern. Ready for state machine wiring.
+**Implementation Status:** Phase 1 complete - Core infrastructure fully implemented, all hardware abstraction classes complete. Phase 2 in progress - State machine logic needs implementation.
 
 ---
 
@@ -12,7 +12,7 @@ FreeRTOS-based architecture using the State Pattern for managing ESC control, se
 
 - **MCU:** ESP32-C3 (DFRobot Beetle)
 - **I/O Expander:** MCP23018 (I2C) - buttons and LEDs
-- **Sensors:** Temperature (DS18B20), Current, Battery voltage
+- **Sensors:** Temperature (DS18B20), Current (ACS759-200B), Battery voltage (ADC)
 - **Output:** ESC via PWM
 
 ---
@@ -59,7 +59,22 @@ FreeRTOS-based architecture using the State Pattern for managing ESC control, se
                                       │
                     ┌─────────────────▼───────────────┐
                     │      MoaDevicesManager          │
-                    │   (Output facade: LEDs, ESC)    │
+                    │   (Output facade: LEDs, ESC)      │
+                    └─────────────────────────────────┘
+                                      │
+                    ┌─────────────────▼───────────────┐
+                    │      Stats Queue (telemetry)    │
+                    └─────────────────┬───────────────┘
+                                      │
+                                      ▼
+                    ┌─────────────────────────────────┐
+                    │      StatsTask (event-driven)   │
+                    └─────────────────┬───────────────┘
+                                      │
+                                      ▼
+                    ┌─────────────────────────────────┐
+                    │      MoaStatsAggregator         │
+                    │   (Thread-safe stats storage)   │
                     └─────────────────────────────────┘
 ```
 
@@ -69,15 +84,15 @@ FreeRTOS-based architecture using the State Pattern for managing ESC control, se
 
 ### States
 
-| State | Description |
-|-------|-------------|
-| **InitState** | Boot sequence, hardware init |
-| **IdleState** | Waiting for user input, ESC stopped |
-| **SurfingState** | Normal operation, ESC active |
-| **OverHeatingState** | Temperature limit exceeded, ESC reduced/stopped |
-| **OverCurrentState** | Current limit exceeded, ESC stopped |
-| **BatteryLowState** | Battery critical, ESC stopped |
-| **ConfigState** | [Future] WiFi AP + webserver for configuration |
+| State | Description | Status |
+|-------|-------------|--------|
+| **InitState** | Boot sequence, hardware init | 🔧 Stub exists, needs implementation |
+| **IdleState** | Waiting for user input, ESC stopped | 🔧 Stub exists, needs implementation |
+| **SurfingState** | Normal operation, ESC active | 🔧 Stub exists, needs implementation |
+| **OverHeatingState** | Temperature limit exceeded, ESC reduced/stopped | 🔧 Stub exists, needs implementation |
+| **OverCurrentState** | Current limit exceeded, ESC stopped | 🔧 Stub exists, needs implementation |
+| **BatteryLowState** | Battery critical, ESC stopped | 🔧 Stub exists, needs implementation |
+| **ConfigState** | [Future] WiFi AP + webserver for configuration | ⏳ Not implemented |
 
 ### Events (ControlCommand Format)
 
@@ -160,42 +175,70 @@ void ControlTask(void* param) {
 
 ### Phase 1: Core (V1) - COMPLETE ✅
 
-- [x] Define `ControlCommand` struct
-- [x] Implement MoaTimer (FreeRTOS xTimer wrapper with queue events)
-- [x] Implement MoaTempControl (DS18B20 with averaging, hysteresis, queue events)
-- [x] Implement MoaBattControl (ADC with averaging, thresholds, queue events)
-- [x] Implement MoaCurrentControl (Hall effect sensor, bidirectional, queue events)
-- [x] Implement MoaMcpDevice (thread-safe MCP23018 wrapper with mutex)
-- [x] Implement MoaButtonControl (debounce, long-press detection, queue events)
-- [x] Implement MoaLedControl (individual control, blink patterns, config mode indication)
-- [x] Implement MoaFlashLog (LittleFS circular buffer, 128 entries, JSON export)
-- [x] Create MoaMainUnit (central coordinator, owns all hardware)
-- [x] Create MoaDevicesManager (output facade: LEDs, ESC, logging)
-- [x] Create MoaStateMachineManager (event router)
-- [x] Create FreeRTOS tasks (SensorTask, IOTask, ControlTask)
-- [x] Create event queue and task integration
-- [x] Reorganize project structure to match RTPBuit pattern
-- [x] Fix build system (include paths, LittleFS dependency)
-- [ ] **NEXT:** Wire ESCController to StateMachine (ramp control in SurfingState)
-- [ ] **NEXT:** Implement state transitions and error states
+#### Hardware Abstraction Layer - COMPLETE ✅
+- [x] `ControlCommand` struct - Unified event structure
+- [x] `MoaTimer` - FreeRTOS xTimer wrapper with queue events
+- [x] `MoaTempControl` - DS18B20 with averaging, hysteresis, queue events, stats
+- [x] `MoaBattControl` - ADC with averaging, 3-level thresholds, queue events, stats
+- [x] `MoaCurrentControl` - Hall effect sensor, bidirectional, queue events, stats
+- [x] `MoaMcpDevice` - Thread-safe MCP23018 wrapper with mutex
+- [x] `MoaButtonControl` - Debounce, long-press detection, polling mode, queue events
+- [x] `MoaLedControl` - Individual control, blink patterns, config mode indication
+- [x] `MoaFlashLog` - LittleFS circular buffer, 128 entries, JSON export, critical flush
+- [x] `MoaStatsAggregator` - Thread-safe stats storage with mutex
+- [x] `StatsReading` - Telemetry structure for stats queue
 
-### Phase 2: Refinement
+#### Core Infrastructure - COMPLETE ✅
+- [x] `MoaMainUnit` - Central coordinator, owns all hardware, creates queues/tasks
+- [x] `MoaDevicesManager` - Output facade (LEDs, ESC, logging)
+- [x] `MoaStateMachineManager` - Event router with full event handling
+- [x] FreeRTOS tasks (SensorTask, IOTask, ControlTask, StatsTask)
+- [x] Event queue and stats queue creation
+- [x] Project structure reorganized to match RTPBuit pattern
+- [x] Build system (PlatformIO) with correct include paths and dependencies
+
+#### State Machine Framework - COMPLETE ✅
+- [x] `MoaStateMachine` - State machine with all 6 state instances
+- [x] `MoaState` - Abstract base class
+- [x] All state classes: `InitState`, `IdleState`, `SurfingState`, `OverHeatingState`, `OverCurrentState`, `BatteryLowState`
+
+#### Pin Mapping & Constants - COMPLETE ✅
+- [x] `PinMapping.h` - All GPIO and MCP23018 pin definitions
+- [x] `Constants.h` - Hardware constants and default configuration values
+
+### Phase 2: State Machine Logic - IN PROGRESS 🔧
+
+#### State Behavior Implementation - NOT STARTED ⏳
+- [ ] **InitState**: Boot sequence, transition to IdleState after init
+- [ ] **IdleState**: Handle button presses, transition to SurfingState on throttle button
+- [ ] **SurfingState**: ESC throttle control based on button input, handle safety events
+- [ ] **OverHeatingState**: Reduce or stop ESC, transition back when cooled
+- [ ] **OverCurrentState**: Stop ESC, require manual reset
+- [ ] **BatteryLowState**: Stop ESC, indicate low battery
+
+#### ESC Integration - NOT STARTED ⏳
+- [ ] Wire ESCController to SurfingState for throttle control
+- [ ] Implement ramp control for smooth throttle transitions
+- [ ] Implement emergency stop in error states
+
+### Phase 3: Refinement - PENDING ⏳
 
 - [x] Button debounce (configurable, default 50ms)
 - [x] Long-press detection (configurable, default 5s)
 - [x] LED blink patterns and config mode indication
 - [x] Flash-based event logging with JSON export
+- [x] Stats aggregator for telemetry
 - [ ] Tunable thresholds via configuration
-- [ ] Serial debug output / telemetry
+- [ ] Serial debug output / telemetry streaming
 
-### Phase 3: BLE Control (Future)
+### Phase 4: BLE Control (Future) - NOT STARTED ⏳
 
 - [ ] Add BLETask with GATT server
 - [ ] Define BLE characteristics for button simulation
-- [ ] Map BLE commands to `EVT_BUTTON_CLICK` events
+- [ ] Map BLE commands to button events
 - [ ] Optional: throttle control characteristic
 
-### Phase 4: WiFi Configuration (Future)
+### Phase 5: WiFi Configuration (Future) - NOT STARTED ⏳
 
 - [ ] Add ConfigState to StateMachine
 - [ ] Entry via long-press or boot combo
@@ -211,85 +254,95 @@ void ControlTask(void* param) {
 ```
 jetsonToESCControl/
 ├── include/
-│   ├── ControlCommand.h      # Unified event structure
-│   ├── StateMachine/
-│   │   ├── MoaState.h
-│   │   ├── MoaStateMachine.h
-│   │   ├── InitState.h
-│   │   ├── IdleState.h
-│   │   ├── SurfingState.h
-│   │   ├── OverHeatingState.h
-│   │   ├── OverCurrentState.h
-│   │   └── BatteryLowState.h
-│   ├── Devices/
-│   │   ├── MoaTempControl.h       # DS18B20 temperature monitoring
-│   │   ├── MoaBattControl.h       # Battery voltage monitoring
-│   │   ├── MoaCurrentControl.h    # Hall effect current monitoring
-│   │   ├── MoaButtonControl.h     # Button input with debounce/long-press
-│   │   ├── MoaLedControl.h        # LED output with blink patterns
-│   │   ├── MoaFlashLog.h          # Flash-based event logging
-│   │   ├── MoaMcpDevice.h         # Thread-safe MCP23018 wrapper
-│   │   ├── ESCController.h        # PWM ESC control with ramping
-│   │   └── Adafruit_MCP23X18.h    # MCP23018 driver (copied from lib)
 │   ├── Helpers/
-│   │   ├── MoaMainUnit.h          # Central coordinator
-│   │   ├── MoaDevicesManager.h    # Output facade (LEDs, ESC, log)
-│   │   ├── MoaStateMachineManager.h  # Event router
-│   │   └── MoaTimer.h             # FreeRTOS xTimer wrapper
-│   ├── Tasks/
-│   │   └── Tasks.h                # FreeRTOS task declarations
-│   ├── PinMapping.h              # GPIO and MCP23018 pin definitions
-│   ├── Constants.h               # Hardware constants and default values
-│   └── Config.h                  [TODO]
+│   │   ├── Constants.h           # Hardware constants and defaults ✅
+│   │   ├── ControlCommand.h      # Unified event structure ✅
+│   │   ├── MoaDevicesManager.h   # Output facade (LEDs, ESC, log) ✅
+│   │   ├── MoaMainUnit.h         # Central coordinator ✅
+│   │   ├── MoaStateMachineManager.h # Event router ✅
+│   │   ├── MoaStatsAggregator.h  # Thread-safe stats storage ✅
+│   │   ├── MoaTimer.h            # FreeRTOS xTimer wrapper ✅
+│   │   ├── PinMapping.h          # GPIO and MCP23018 pins ✅
+│   │   └── StatsReading.h        # Telemetry structure ✅
+│   ├── Devices/
+│   │   ├── Adafruit_MCP23X18.h   # MCP23018 driver ✅
+│   │   ├── ESCController.h       # PWM ESC control with ramping ✅
+│   │   ├── MoaBattControl.h      # Battery voltage monitoring ✅
+│   │   ├── MoaButtonControl.h    # Button input with debounce/long-press ✅
+│   │   ├── MoaCurrentControl.h   # Hall effect current monitoring ✅
+│   │   ├── MoaFlashLog.h         # Flash-based event logging ✅
+│   │   ├── MoaLedControl.h       # LED output with blink patterns ✅
+│   │   ├── MoaMcpDevice.h        # Thread-safe MCP23018 wrapper ✅
+│   │   └── MoaTempControl.h      # DS18B20 temperature monitoring ✅
+│   ├── StateMachine/
+│   │   ├── BatteryLowState.h     # Battery low state 🔧
+│   │   ├── IdleState.h           # Idle state 🔧
+│   │   ├── InitState.h           # Initialization state 🔧
+│   │   ├── MoaState.h            # Abstract base class ✅
+│   │   ├── MoaStateMachine.h     # State machine ✅
+│   │   ├── MoaStateMachineManager.h # Event router ✅
+│   │   ├── OverCurrentState.h    # Overcurrent state 🔧
+│   │   ├── OverHeatingState.h    # Overheating state 🔧
+│   │   └── SurfingState.h        # Normal operation state 🔧
+│   └── Tasks/
+│       └── Tasks.h               # FreeRTOS task declarations ✅
 ├── src/
-│   ├── StateMachine/
-│   │   ├── MoaStateMachine.cpp
-│   │   ├── InitState.cpp
-│   │   ├── IdleState.cpp
-│   │   ├── SurfingState.cpp
-│   │   ├── OverHeatingState.cpp
-│   │   ├── OverCurrentState.cpp
-│   │   └── BatteryLowState.cpp
-│   ├── Devices/
-│   │   ├── MoaTempControl.cpp
-│   │   ├── MoaBattControl.cpp
-│   │   ├── MoaCurrentControl.cpp
-│   │   ├── MoaButtonControl.cpp
-│   │   ├── MoaLedControl.cpp
-│   │   ├── MoaFlashLog.cpp
-│   │   ├── MoaMcpDevice.cpp
-│   │   ├── ESCController.cpp
-│   │   └── Adafruit_MCP23X18.cpp
 │   ├── Helpers/
-│   │   ├── MoaMainUnit.cpp
-│   │   ├── MoaDevicesManager.cpp
-│   │   ├── MoaStateMachineManager.cpp
-│   │   └── MoaTimer.cpp
+│   │   ├── MoaDevicesManager.cpp ✅
+│   │   ├── MoaMainUnit.cpp       ✅
+│   │   ├── MoaStateMachineManager.cpp ✅
+│   │   ├── MoaStatsAggregator.cpp ✅
+│   │   └── MoaTimer.cpp          ✅
+│   ├── Devices/
+│   │   ├── Adafruit_MCP23X18.cpp ✅
+│   │   ├── ESCController.cpp     ✅
+│   │   ├── MoaBattControl.cpp    ✅
+│   │   ├── MoaButtonControl.cpp  ✅
+│   │   ├── MoaCurrentControl.cpp ✅
+│   │   ├── MoaFlashLog.cpp       ✅
+│   │   ├── MoaLedControl.cpp     ✅
+│   │   ├── MoaMcpDevice.cpp      ✅
+│   │   └── MoaTempControl.cpp    ✅
+│   ├── StateMachine/
+│   │   ├── BatteryLowState.cpp   🔧 (stub)
+│   │   ├── IdleState.cpp         🔧 (stub)
+│   │   ├── InitState.cpp         🔧 (stub)
+│   │   ├── MoaStateMachine.cpp   ✅
+│   │   ├── OverCurrentState.cpp  🔧 (stub)
+│   │   ├── OverHeatingState.cpp  🔧 (stub)
+│   │   └── SurfingState.cpp      🔧 (stub)
 │   ├── Tasks/
-│   │   ├── SensorTask.cpp         # Sensor producer updates
-│   │   ├── IOTask.cpp             # Button/LED updates
-│   │   └── ControlTask.cpp        # Event queue processing
-│   └── main.cpp                   # Ultra-clean entry point
-├── lib/
-│   ├── MCP23018/                  # Adafruit MCP23X18 base library
-│   └── TempControl/               # [Legacy] Original temperature control
-└── platformio.ini
+│   │   ├── ControlTask.cpp       ✅
+│   │   ├── IOTask.cpp            ✅
+│   │   ├── SensorTask.cpp        ✅
+│   │   └── StatsTask.cpp         ✅
+│   └── main.cpp                  ✅
+├── test/                         # Test directory
+├── test_backup/                  # Backup test files
+└── platformio.ini                # PlatformIO configuration ✅
 ```
+
+**Legend:**
+- ✅ Complete and fully implemented
+- 🔧 Stub exists, needs implementation
+- ⏳ Not implemented
+
 
 ---
 
 ## Key Design Principles
 
-1. **State machine is source-agnostic** — doesn't know where events come from
-2. **Single task owns state machine** — no mutex needed for state transitions
-3. **Event queue decouples producers/consumers** — easy to add new input sources
-4. **ConfigState is mutually exclusive** — WiFi/web only runs in dedicated mode
-5. **I2C protected by mutex** — MoaMcpDevice provides thread-safe access
-6. **Unified event format** — All producers use `ControlCommand` with consistent semantics
-7. **Producer classes are self-contained** — Each handles its own averaging, hysteresis, and thresholds
-8. **Critical events trigger immediate logging** — Overcurrent, overheat, errors flush to flash immediately
-9. **MoaMainUnit owns everything** — Single coordinator class keeps main.cpp ultra-clean
-10. **RTPBuit-inspired pattern** — DevicesManager facade + StateMachineManager router
+1. **State machine is source-agnostic** — doesn't know where events come from ✅
+2. **Single task owns state machine** — no mutex needed for state transitions ✅
+3. **Event queue decouples producers/consumers** — easy to add new input sources ✅
+4. **Separate stats queue** — telemetry doesn't impact control events ✅
+5. **I2C protected by mutex** — MoaMcpDevice provides thread-safe access ✅
+6. **Stats protected by semaphore** — MoaStatsAggregator provides thread-safe access ✅
+7. **Unified event format** — All producers use `ControlCommand` with consistent semantics ✅
+8. **Producer classes are self-contained** — Each handles its own averaging, hysteresis, and thresholds ✅
+9. **Critical events trigger immediate logging** — Overcurrent, overheat, errors flush to flash immediately ✅
+10. **MoaMainUnit owns everything** — Single coordinator class keeps main.cpp ultra-clean ✅
+11. **RTPBuit-inspired pattern** — DevicesManager facade + StateMachineManager router ✅
 
 ---
 
@@ -306,43 +359,43 @@ jetsonToESCControl/
 
 ## Producer Classes Summary
 
-| Class | Sensor/Source | Key Features |
-|-------|---------------|---------------|
-| **MoaTimer** | FreeRTOS xTimer | One-shot/periodic, timer ID in commandType |
-| **MoaTempControl** | DS18B20 | Averaging, hysteresis, above/below threshold events |
-| **MoaBattControl** | ADC + divider | Averaging, 3-level thresholds (HIGH/MED/LOW) |
-| **MoaCurrentControl** | ACS759-200B Hall | Bidirectional, averaging, overcurrent detection |
-| **MoaButtonControl** | MCP23018 Port A | Debounce, long-press, 5 buttons |
-| **MoaLedControl** | MCP23018 Port B | 5 LEDs, blink patterns, config mode indication |
-| **MoaFlashLog** | LittleFS | 128 entries, 1-min flush, JSON export |
+| Class | Sensor/Source | Key Features | Status |
+|-------|---------------|--------------|--------|
+| **MoaTimer** | FreeRTOS xTimer | One-shot/periodic, timer ID in commandType | ✅ Complete |
+| **MoaTempControl** | DS18B20 | Averaging, hysteresis, above/below threshold events, stats | ✅ Complete |
+| **MoaBattControl** | ADC + divider | Averaging, 3-level thresholds (HIGH/MED/LOW), stats | ✅ Complete |
+| **MoaCurrentControl** | ACS759-200B Hall | Bidirectional, averaging, overcurrent detection, stats | ✅ Complete |
+| **MoaButtonControl** | MCP23018 Port A | Debounce, long-press, 5 buttons, polling mode | ✅ Complete |
+| **MoaLedControl** | MCP23018 Port B | 5 LEDs, blink patterns, config mode indication | ✅ Complete |
+| **MoaFlashLog** | LittleFS | 128 entries, 1-min flush, JSON export, critical flush | ✅ Complete |
+| **MoaStatsAggregator** | Stats queue | Thread-safe storage, mutex-protected access | ✅ Complete |
 
 ---
 
-*Last updated: 2026-01-31*
+## Current Status Summary
+
+### ✅ Completed (Ready for Use)
+- All hardware abstraction classes fully implemented
+- All sensor producers with averaging, hysteresis, and event generation
+- Button input with debounce and long-press detection
+- LED output with blink patterns
+- Flash logging with circular buffer
+- FreeRTOS task infrastructure
+- Event routing and state machine framework
+- Stats aggregation for telemetry
+- Build system configured
+
+### 🔧 In Progress / Stubs Exist
+- State machine logic (all states have empty event handlers)
+- ESC control integration with state machine
+- State transitions between states
+
+### ⏳ Not Started
+- ConfigState for WiFi configuration
+- BLE control interface
+- Web server for configuration
+- Serial telemetry streaming
 
 ---
 
-## Current Status & Next Steps
-
-### ✅ Completed
-- **Architecture**: FreeRTOS event-driven system with unified ControlCommand events
-- **Project Structure**: Reorganized to match RTPBuit pattern (include/Devices/, src/Devices/)
-- **All Producer Classes**: Temperature, Battery, Current, Button, LED, Timer, Flash logging
-- **Core Infrastructure**: MoaMainUnit, MoaDevicesManager, MoaStateMachineManager
-- **FreeRTOS Tasks**: SensorTask, IOTask, ControlTask with proper priorities
-- **Build System**: PlatformIO configuration with correct include paths and dependencies
-- **Compilation**: Project builds successfully with all components integrated
-
-### 🎯 Next Steps for V1 Working Version
-1. **Wire ESCController to StateMachine**: Implement throttle control in SurfingState
-2. **Implement State Transitions**: Connect all states with proper event handling
-3. **Add Error State Logic**: OverCurrent, OverHeating, BatteryLow behaviors
-4. **Test Basic Operation**: Verify button input → state change → ESC output
-5. **Add Serial Debug**: Optional telemetry for debugging
-
-### 📋 Implementation Priority
-1. **SurfingState ESC Control** (button → throttle level)
-2. **State Machine Wiring** (event routing between states)
-3. **Safety Features** (overcurrent/overheat shutdown)
-4. **User Testing** (basic button control validation)
-5. **Debug Output** (serial monitoring for development)
+*Last updated: 2026-02-05*
