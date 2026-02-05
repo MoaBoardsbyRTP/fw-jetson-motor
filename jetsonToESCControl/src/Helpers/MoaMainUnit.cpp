@@ -145,9 +145,9 @@ void MoaMainUnit::initHardware() {
     _currentControl.begin();
     Serial.println("Current sensor initialized.");
 
-    // Initialize button input
-    _buttonControl.begin(false);  // Polling mode (no interrupt)
-    Serial.println("Button input initialized.");
+    // Initialize button input with interrupt mode enabled
+    _buttonControl.begin(true);  // Interrupt-driven mode
+    Serial.println("Button input initialized (interrupt mode).");
 
     // Initialize LED output
     _ledControl.begin();

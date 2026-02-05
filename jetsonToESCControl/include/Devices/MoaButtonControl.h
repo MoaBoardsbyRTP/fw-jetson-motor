@@ -155,14 +155,32 @@ public:
     void IRAM_ATTR handleInterrupt();
 
     /**
-     * @brief Process pending interrupt and read button state
+     * @brief Process a pending interrupt
      * 
-     * Call this from a task context after handleInterrupt() sets the flag.
-     * This performs the actual I2C read and event generation.
-     * 
-     * @note Safe to call even if no interrupt is pending (will just return)
+     * Reads INTCAPA register to get button state at interrupt time,
+     * processes button changes with debounce, and clears MCP interrupt.
+     * Call this from IOTask when isInterruptPending() returns true.
      */
     void processInterrupt();
+
+    /**
+     * @brief Check if an interrupt is pending or in debounce window
+     * 
+     * @return true if interrupt pending or debounce active
+     * @return false if no activity
+     */
+    bool isInterruptPending();
+
+    /**
+     * @brief Check for long-press events (must be called periodically)
+     * 
+     * Polls button hold times and fires long-press events when threshold
+     * is reached. This must be called periodically (e.g., from IOTask)
+     * because long-press detection requires timing, not just edge detection.
+     * 
+     * @note Only works if enableLongPress(true) was called
+     */
+    void checkLongPress();
 
     /**
      * @brief Poll button state and generate events (alternative to interrupt mode)
@@ -254,7 +272,8 @@ private:
     
     uint8_t _lastRawState;             ///< Last raw reading from MCP
     uint8_t _debouncedState;           ///< Current debounced state
-    
+    uint32_t _debounceUntil;           ///< Timestamp until which to ignore interrupts
+
     /**
      * @brief Per-button state tracking
      */
@@ -280,12 +299,24 @@ private:
     uint8_t commandIdToIndex(uint8_t commandId) const;
 
     /**
-     * @brief Process a single button's state change
+     * @brief Process a single button's state change (called from update())
      * @param index Button array index (0-4)
      * @param isPressed Current pressed state
      * @param now Current timestamp
      */
     void processButton(uint8_t index, bool isPressed, uint32_t now);
+
+    /**
+     * @brief Process a button state change from interrupt context
+     * 
+     * Similar to processButton but optimized for interrupt-driven operation.
+     * Called from processInterrupt() with captured state from INTCAPA.
+     * 
+     * @param index Button array index (0-4)
+     * @param isPressed Captured pressed state from INTCAPA
+     * @param now Current timestamp
+     */
+    void processButtonFromInterrupt(uint8_t index, bool isPressed, uint32_t now);
 
     /**
      * @brief Push a button event to the queue

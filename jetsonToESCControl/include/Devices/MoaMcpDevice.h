@@ -15,6 +15,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "Adafruit_MCP23X18.h"
+#include "PinMapping.h"
 
 /**
  * @brief Default I2C address for MCP23018
@@ -102,6 +103,28 @@ public:
      */
     uint32_t getMutexTimeout() const;
 
+    // === Hardware reset and recovery ===
+
+    /**
+     * @brief Perform hardware reset of MCP23018 via reset pin
+     * 
+     * Pulses the reset line (PIN_I2C_RESET) LOW for 2μs then HIGH,
+     * waits 1ms for device stabilization. Call before begin() or for recovery.
+     */
+    void hardwareReset();
+
+    /**
+     * @brief Attempt to recover from I2C communication failure
+     * 
+     * Performs hardware reset and re-initializes I2C communication.
+     * Use this when I2C transactions are failing.
+     * 
+     * @param wire Pointer to TwoWire instance (default: &Wire)
+     * @return true if recovery successful
+     * @return false if recovery failed
+     */
+    bool recover(TwoWire* wire = &Wire);
+
     // === Thread-safe Port A operations (typically buttons/inputs) ===
 
     /**
@@ -109,6 +132,16 @@ public:
      * @return uint8_t Port A state, or 0 if mutex timeout
      */
     uint8_t readPortA();
+
+    /**
+     * @brief Read Port A interrupt capture register (thread-safe)
+     * 
+     * INTCAPA captures the GPIO state at the moment of interrupt.
+     * Reading this clears the interrupt condition on MCP23018.
+     * 
+     * @return uint8_t Captured Port A state at interrupt time
+     */
+    uint8_t readInterruptCapturePortA();
 
     /**
      * @brief Configure Port A pin modes (thread-safe)
@@ -126,6 +159,15 @@ public:
      * @param mode Interrupt mode: CHANGE, FALLING, RISING
      */
     void enableInterruptPortA(uint8_t mask, uint8_t defaultValue = 0x00);
+
+    /**
+     * @brief Check if MCP23018 interrupt pin is still asserted
+     * 
+     * @param intPin ESP32 GPIO pin connected to MCP23018 INTA/INTB
+     * @return true if interrupt pin is LOW (active)
+     * @return false if interrupt pin is HIGH (inactive)
+     */
+    bool isInterruptActive(uint8_t intPin);
 
     // === Thread-safe Port B operations (typically LEDs/outputs) ===
 
@@ -181,6 +223,7 @@ private:
     uint8_t _i2cAddr;                  ///< I2C address
     uint32_t _mutexTimeoutMs;          ///< Mutex timeout in milliseconds
     bool _initialized;                 ///< Initialization flag
+    uint8_t _resetPin;                 ///< Hardware reset pin (PIN_I2C_RESET)
 
     /**
      * @brief Acquire the mutex with timeout

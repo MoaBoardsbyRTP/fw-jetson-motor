@@ -27,6 +27,7 @@ MoaButtonControl::MoaButtonControl(QueueHandle_t eventQueue, MoaMcpDevice& mcpDe
     , _longPressEnabled(false)
     , _lastRawState(0xFF)      // All released (active LOW, so 1 = released)
     , _debouncedState(0x00)    // All not pressed
+    , _debounceUntil(0)        // No debounce active
 {
     // Initialize button state tracking
     for (uint8_t i = 0; i < MOA_BUTTON_COUNT; i++) {
@@ -72,14 +73,91 @@ void IRAM_ATTR MoaButtonControl::handleInterrupt() {
 }
 
 void MoaButtonControl::processInterrupt() {
-    if (!_interruptPending) {
+    // Atomically check and clear interrupt flag
+    if (!__atomic_test_and_clear(&_interruptPending, __ATOMIC_SEQ_CST)) {
         return;
     }
     
-    _interruptPending = false;
+    uint32_t now = millis();
     
-    // Read and process button state
-    update();
+    // Check if we're still in debounce window
+    if (now < _debounceUntil) {
+        // Still debouncing - ignore this interrupt but clear MCP interrupt
+        // by reading the capture register
+        _mcpDevice.readInterruptCapturePortA();
+        return;
+    }
+    
+    // Read INTCAPA to get state at interrupt time and clear MCP interrupt
+    uint8_t capturedState = _mcpDevice.readInterruptCapturePortA();
+    
+    // Process only the buttons that changed (based on captured state vs last debounced)
+    for (uint8_t i = 0; i < MOA_BUTTON_COUNT; i++) {
+        uint8_t pin = BUTTON_PIN_STOP + i;
+        bool capturedPressed = !(capturedState & (1 << pin));  // Active LOW
+        
+        // Only process if state actually changed from our debounced view
+        if (capturedPressed != _buttons[i].isPressed) {
+            processButtonFromInterrupt(i, capturedPressed, now);
+        }
+    }
+    
+    _lastRawState = capturedState;
+    
+    // Set debounce window - ignore further interrupts for debounce period
+    _debounceUntil = now + _debounceMs;
+}
+
+void MoaButtonControl::processButtonFromInterrupt(uint8_t index, bool isPressed, uint32_t now) {
+    ButtonState& btn = _buttons[index];
+    
+    // Update debounced state immediately (interrupt means real change)
+    btn.lastChangeTime = now;
+    btn.isPressed = isPressed;
+    
+    if (isPressed) {
+        // Button just pressed
+        btn.pressStartTime = now;
+        btn.longPressFired = false;
+        
+        // Push press event
+        pushButtonEvent(pinToCommandId(index), BUTTON_EVENT_PRESS);
+        
+        // Update debounced state bitmask
+        _debouncedState |= (1 << index);
+    } else {
+        // Button just released
+        // Optionally push release event (currently not used)
+        // pushButtonEvent(pinToCommandId(index), BUTTON_EVENT_RELEASE);
+        
+        // Update debounced state bitmask
+        _debouncedState &= ~(1 << index);
+    }
+}
+
+bool MoaButtonControl::isInterruptPending() {
+    return _interruptPending || (millis() < _debounceUntil);
+}
+
+void MoaButtonControl::checkLongPress() {
+    if (!_longPressEnabled) {
+        return;
+    }
+    
+    uint32_t now = millis();
+    
+    // Check each button for long-press
+    for (uint8_t i = 0; i < MOA_BUTTON_COUNT; i++) {
+        ButtonState& btn = _buttons[i];
+        
+        if (btn.isPressed && !btn.longPressFired) {
+            // Button is held - check for long press
+            if ((now - btn.pressStartTime) >= _longPressMs) {
+                btn.longPressFired = true;
+                pushButtonEvent(pinToCommandId(i), BUTTON_EVENT_LONG_PRESS);
+            }
+        }
+    }
 }
 
 void MoaButtonControl::update() {

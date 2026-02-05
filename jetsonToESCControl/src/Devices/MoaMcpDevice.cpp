@@ -11,8 +11,54 @@ MoaMcpDevice::MoaMcpDevice(uint8_t i2cAddr)
     : _i2cAddr(i2cAddr)
     , _mutexTimeoutMs(MOA_MCP_MUTEX_TIMEOUT_MS)
     , _initialized(false)
+    , _resetPin(PIN_I2C_RESET)
 {
     _mutex = xSemaphoreCreateMutex();
+}
+
+void MoaMcpDevice::hardwareReset() {
+    // Configure reset pin as output if not already done
+    pinMode(_resetPin, OUTPUT);
+    
+    // Active LOW reset pulse - minimum 1μs required, use 2μs for safety
+    digitalWrite(_resetPin, LOW);
+    delayMicroseconds(2);
+    digitalWrite(_resetPin, HIGH);
+    
+    // Wait for MCP23018 to stabilize (1ms as per datasheet)
+    delay(1);
+}
+
+bool MoaMcpDevice::recover(TwoWire* wire) {
+    // Attempt hardware reset
+    hardwareReset();
+    
+    // Re-initialize I2C communication
+    if (!acquireMutex()) {
+        return false;
+    }
+    
+    _initialized = _mcp.begin_I2C(_i2cAddr, wire);
+    
+    releaseMutex();
+    return _initialized;
+}
+
+uint8_t MoaMcpDevice::readInterruptCapturePortA() {
+    if (!acquireMutex()) {
+        return 0;
+    }
+    
+    // Read INTCAPA register (0x10) - captures GPIO state at interrupt time
+    uint8_t value = _mcp.readRegister(MCP23X18_INTCAPA);
+    
+    releaseMutex();
+    return value;
+}
+
+bool MoaMcpDevice::isInterruptActive(uint8_t intPin) {
+    // Check if the interrupt pin is still asserted (LOW)
+    return digitalRead(intPin) == LOW;
 }
 
 MoaMcpDevice::~MoaMcpDevice() {
@@ -23,6 +69,9 @@ MoaMcpDevice::~MoaMcpDevice() {
 }
 
 bool MoaMcpDevice::begin(TwoWire* wire) {
+    // Perform hardware reset first to ensure known state
+    hardwareReset();
+    
     if (!acquireMutex()) {
         return false;
     }
