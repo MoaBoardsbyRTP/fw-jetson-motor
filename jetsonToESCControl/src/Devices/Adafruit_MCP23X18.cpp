@@ -85,6 +85,34 @@ void Adafruit_MCP23X18::writeGPIOAB(uint16_t value) {
 
 /**************************************************************************/
 /*!
+    @brief  Read Port A interrupt capture register (INTCAPA).
+    
+    Returns the GPIO state captured at the moment the interrupt occurred.
+    Reading this register clears the interrupt condition on the MCP23018.
+    
+    @return Captured Port A pin states as uint8_t.
+*/
+/**************************************************************************/
+uint8_t Adafruit_MCP23X18::readIntCapA() {
+  return (uint8_t)getRegister(MCP23XXX_INTCAP, 0);
+}
+
+/**************************************************************************/
+/*!
+    @brief  Read Port B interrupt capture register (INTCAPB).
+    
+    Returns the GPIO state captured at the moment the interrupt occurred.
+    Reading this register clears the interrupt condition on the MCP23018.
+    
+    @return Captured Port B pin states as uint8_t.
+*/
+/**************************************************************************/
+uint8_t Adafruit_MCP23X18::readIntCapB() {
+  return (uint8_t)getRegister(MCP23XXX_INTCAP, 1);
+}
+
+/**************************************************************************/
+/*!
     @brief  Enable hardware address pins (A2, A1, A0).
     
     Sets the HAEN (Hardware Address Enable) bit in IOCON register.

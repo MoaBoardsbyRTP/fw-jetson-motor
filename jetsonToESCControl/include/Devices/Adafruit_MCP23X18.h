@@ -40,6 +40,10 @@ public:
   uint16_t readGPIOAB();
   void writeGPIOAB(uint16_t value);
 
+  // Interrupt capture registers (captures GPIO state at interrupt time)
+  uint8_t readIntCapA();
+  uint8_t readIntCapB();
+
   // Enable hardware address pins (HAEN bit in IOCON)
   void enableAddrPins();
 };

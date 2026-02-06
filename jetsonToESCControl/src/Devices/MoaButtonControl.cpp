@@ -73,10 +73,11 @@ void IRAM_ATTR MoaButtonControl::handleInterrupt() {
 }
 
 void MoaButtonControl::processInterrupt() {
-    // Atomically check and clear interrupt flag
-    if (!__atomic_test_and_clear(&_interruptPending, __ATOMIC_SEQ_CST)) {
+    // Check and clear interrupt flag (single consumer in IOTask, ISR only sets)
+    if (!_interruptPending) {
         return;
     }
+    _interruptPending = false;
     
     uint32_t now = millis();
     

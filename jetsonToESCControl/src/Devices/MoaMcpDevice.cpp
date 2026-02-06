@@ -49,8 +49,8 @@ uint8_t MoaMcpDevice::readInterruptCapturePortA() {
         return 0;
     }
     
-    // Read INTCAPA register (0x10) - captures GPIO state at interrupt time
-    uint8_t value = _mcp.readRegister(MCP23X18_INTCAPA);
+    // Read INTCAPA via our custom Adafruit_MCP23X18 method
+    uint8_t value = _mcp.readIntCapA();
     
     releaseMutex();
     return value;

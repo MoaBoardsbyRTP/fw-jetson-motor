@@ -11,7 +11,7 @@ FreeRTOS-based architecture using the State Pattern for managing ESC control, se
 ## Target Hardware
 
 - **MCU:** ESP32-C3 (DFRobot Beetle)
-- **I/O Expander:** MCP23018 (I2C) - buttons and LEDs
+- **I/O Expander:** MCP23018 (I2C) - buttons (Port A, interrupt-driven) and LEDs (Port B)
 - **Sensors:** Temperature (DS18B20), Current (ACS759-200B), Battery voltage (ADC)
 - **Output:** ESC via PWM
 
@@ -38,9 +38,11 @@ FreeRTOS-based architecture using the State Pattern for managing ESC control, se
 │   (50ms)      │            │    (20ms)       │            │  (event-driven) │
 │               │            │                 │            │                 │
 │ TempControl   │            │ ButtonControl   │            │ StateMachine    │
-│ BattControl   │            │ LedControl      │            │ Manager         │
-│ CurrentControl│            │                 │            │                 │
+│ BattControl   │            │  (interrupt)    │            │ Manager         │
+│ CurrentControl│            │ LedControl      │            │                 │
 └───────┬───────┘            └────────┬────────┘            └────────┬────────┘
+                                      │
+                             MCP23018 INTA ──► ESP32 GPIO2 (ISR)
         │                             │                              │
         └─────────────────────────────┼──────────────────────────────┘
                                       ▼
@@ -121,7 +123,7 @@ struct ControlCommand {
 | Task | Priority | Period | Responsibility |
 |------|----------|--------|----------------|
 | **SensorTask** | High | 50ms | Call `update()` on MoaTempControl, MoaBattControl, MoaCurrentControl |
-| **IOTask** | Medium | 20ms | Call `update()` on MoaButtonControl, MoaLedControl |
+| **IOTask** | Medium | 20ms | Process button interrupts (INTCAPA), check long-press, update MoaLedControl |
 | **ControlTask** | Medium | Event-driven | Process event queue, run StateMachine, update ESCController, call MoaFlashLog.update() |
 | **BLETask** | Medium | Event-driven | [Future] GATT server, BLE commands → events |
 | **WebTask** | Low | N/A | [Future] Config webserver (only in ConfigState) |
@@ -139,11 +141,14 @@ void SensorTask(void* param) {
     }
 }
 
-// IOTask (20ms period)
+// IOTask (20ms period) - Interrupt-driven buttons
 void IOTask(void* param) {
     for (;;) {
-        buttonControl.update();   // Pushes events on button press/long-press
-        ledControl.update();      // Drives LED blink timing
+        if (buttonControl.isInterruptPending()) {
+            buttonControl.processInterrupt();  // Read INTCAPA, debounce, push events
+        }
+        buttonControl.checkLongPress();        // Polled long-press detection
+        ledControl.update();                   // Drives LED blink timing
         vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
@@ -166,6 +171,8 @@ void ControlTask(void* param) {
 
 - **Event Queue:** Single FreeRTOS queue for all `ControlCommand` events → ControlTask
 - **MCP23018 Mutex:** `MoaMcpDevice` class provides mutex-protected I2C access for MoaButtonControl and MoaLedControl
+- **MCP23018 INTA Interrupt:** Hardware interrupt on ESP32 GPIO2 sets volatile flag; IOTask processes via I2C
+- **MCP23018 Hardware Reset:** Dedicated reset line (GPIO10) for initialization and I2C error recovery
 - **I2C Mutex:** [If needed] Additional mutex if other I2C devices share the bus
 - **Config Mutex:** [Future] Protect shared config struct for web access
 
@@ -181,8 +188,8 @@ void ControlTask(void* param) {
 - [x] `MoaTempControl` - DS18B20 with averaging, hysteresis, queue events, stats
 - [x] `MoaBattControl` - ADC with averaging, 3-level thresholds, queue events, stats
 - [x] `MoaCurrentControl` - Hall effect sensor, bidirectional, queue events, stats
-- [x] `MoaMcpDevice` - Thread-safe MCP23018 wrapper with mutex
-- [x] `MoaButtonControl` - Debounce, long-press detection, polling mode, queue events
+- [x] `MoaMcpDevice` - Thread-safe MCP23018 wrapper with mutex, hardware reset, I2C error recovery
+- [x] `MoaButtonControl` - Interrupt-driven via INTCAPA, debounce window, long-press detection, queue events
 - [x] `MoaLedControl` - Individual control, blink patterns, config mode indication
 - [x] `MoaFlashLog` - LittleFS circular buffer, 128 entries, JSON export, critical flush
 - [x] `MoaStatsAggregator` - Thread-safe stats storage with mutex
@@ -223,8 +230,8 @@ void ControlTask(void* param) {
 
 ### Phase 3: Refinement - PENDING ⏳
 
-- [x] Button debounce (configurable, default 50ms)
-- [x] Long-press detection (configurable, default 5s)
+- [x] Button debounce (configurable, default 50ms, interrupt-driven with debounce window)
+- [x] Long-press detection (configurable, default 5s, polled in IOTask)
 - [x] LED blink patterns and config mode indication
 - [x] Flash-based event logging with JSON export
 - [x] Stats aggregator for telemetry
@@ -337,6 +344,8 @@ jetsonToESCControl/
 3. **Event queue decouples producers/consumers** — easy to add new input sources ✅
 4. **Separate stats queue** — telemetry doesn't impact control events ✅
 5. **I2C protected by mutex** — MoaMcpDevice provides thread-safe access ✅
+5b. **Hardware reset for I2C recovery** — MCP23018 reset line (GPIO10) for initialization and error recovery ✅
+5c. **Interrupt-driven button input** — MCP23018 INTA → ESP32 GPIO2 ISR, INTCAPA read clears interrupt ✅
 6. **Stats protected by semaphore** — MoaStatsAggregator provides thread-safe access ✅
 7. **Unified event format** — All producers use `ControlCommand` with consistent semantics ✅
 8. **Producer classes are self-contained** — Each handles its own averaging, hysteresis, and thresholds ✅
@@ -354,6 +363,10 @@ jetsonToESCControl/
 - Keep webserver minimal to conserve RAM
 - Flash logging uses LittleFS with 128-entry circular buffer (~1KB)
 - Long-press STOP button (configurable, default 5s) enters config mode
+- Button interrupts reduce I2C bus load: I2C reads only on button press/release, not every 20ms
+- MCP23018 INTA is active-low, open-drain; ESP32 GPIO2 configured with INPUT_PULLUP
+- INTCAPA register read clears the interrupt condition on the MCP23018
+- Hardware reset pin (GPIO10) pulses LOW for 2μs, then 1ms stabilization delay
 
 ---
 
@@ -365,7 +378,7 @@ jetsonToESCControl/
 | **MoaTempControl** | DS18B20 | Averaging, hysteresis, above/below threshold events, stats | ✅ Complete |
 | **MoaBattControl** | ADC + divider | Averaging, 3-level thresholds (HIGH/MED/LOW), stats | ✅ Complete |
 | **MoaCurrentControl** | ACS759-200B Hall | Bidirectional, averaging, overcurrent detection, stats | ✅ Complete |
-| **MoaButtonControl** | MCP23018 Port A | Debounce, long-press, 5 buttons, polling mode | ✅ Complete |
+| **MoaButtonControl** | MCP23018 Port A | Interrupt-driven (INTA), debounce window, long-press, 5 buttons | ✅ Complete |
 | **MoaLedControl** | MCP23018 Port B | 5 LEDs, blink patterns, config mode indication | ✅ Complete |
 | **MoaFlashLog** | LittleFS | 128 entries, 1-min flush, JSON export, critical flush | ✅ Complete |
 | **MoaStatsAggregator** | Stats queue | Thread-safe storage, mutex-protected access | ✅ Complete |
@@ -377,7 +390,9 @@ jetsonToESCControl/
 ### ✅ Completed (Ready for Use)
 - All hardware abstraction classes fully implemented
 - All sensor producers with averaging, hysteresis, and event generation
-- Button input with debounce and long-press detection
+- Interrupt-driven button input via MCP23018 INTA with debounce window and long-press detection
+- MCP23018 hardware reset line for initialization and I2C error recovery
+- Custom `Adafruit_MCP23X18` class with `readIntCapA()`/`readIntCapB()` for interrupt capture registers
 - LED output with blink patterns
 - Flash logging with circular buffer
 - FreeRTOS task infrastructure
@@ -398,4 +413,4 @@ jetsonToESCControl/
 
 ---
 
-*Last updated: 2026-02-05*
+*Last updated: 2026-02-06*

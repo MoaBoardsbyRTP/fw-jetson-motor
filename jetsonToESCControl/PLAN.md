@@ -1,14 +1,14 @@
 # Moa ESC Controller - Development Plan
 
 **Project:** jetsonToESCControl  
-**Last Updated:** 2026-02-05  
+**Last Updated:** 2026-02-06  
 **Based on:** Complete codebase analysis
 
 ---
 
 ## Executive Summary
 
-The jetsonToESCControl project has a **fully implemented Phase 1** with all hardware abstraction classes, FreeRTOS infrastructure, and the state machine framework complete. The system is event-driven using `ControlCommand` structs via FreeRTOS queues, with thread-safe I2C access via mutex-protected `MoaMcpDevice`.
+The jetsonToESCControl project has a **fully implemented Phase 1** with all hardware abstraction classes, FreeRTOS infrastructure, and the state machine framework complete. The system is event-driven using `ControlCommand` structs via FreeRTOS queues, with thread-safe I2C access via mutex-protected `MoaMcpDevice`. Button inputs are **interrupt-driven** via MCP23018 INTA pin, with hardware reset support for I2C error recovery.
 
 **Current Blocker:** All 6 state classes exist but have empty event handler methods. The system cannot transition between states or control the ESC until state logic is implemented.
 
@@ -18,7 +18,7 @@ The jetsonToESCControl project has a **fully implemented Phase 1** with all hard
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Hardware Abstraction (8 classes) | ✅ Complete | All sensors, I/O, logging, stats fully functional |
+| Hardware Abstraction (8 classes) | ✅ Complete | All sensors, I/O (interrupt-driven buttons), logging, stats fully functional |
 | FreeRTOS Tasks (4 tasks) | ✅ Complete | Sensor, IO, Control, Stats tasks running |
 | Event System | ✅ Complete | ControlCommand + ControlEventType unified events |
 | State Machine Framework | ✅ Complete | All 6 state classes instantiated |
@@ -40,9 +40,10 @@ The jetsonToESCControl project has a **fully implemented Phase 1** with all hard
 - ✅ `MoaCurrentControl` - ACS759-200B Hall sensor, bidirectional, overcurrent detection
 
 #### I/O Controllers
-- ✅ `MoaButtonControl` - 5 buttons via MCP23018, debounce, long-press (5s), polling mode
+- ✅ `MoaButtonControl` - 5 buttons via MCP23018, interrupt-driven (INTA/INTCAPA), debounce window, long-press (5s)
 - ✅ `MoaLedControl` - 5 LEDs via MCP23018, blink patterns, config mode indication
-- ✅ `MoaMcpDevice` - Thread-safe I2C wrapper with FreeRTOS mutex
+- ✅ `MoaMcpDevice` - Thread-safe I2C wrapper with FreeRTOS mutex, hardware reset (GPIO10), I2C error recovery
+- ✅ `Adafruit_MCP23X18` - Custom MCP23018 driver with `readIntCapA()`/`readIntCapB()` for interrupt capture registers
 
 #### System Services
 - ✅ `MoaFlashLog` - LittleFS circular buffer, 128 entries, JSON export, critical flush
@@ -61,7 +62,7 @@ The jetsonToESCControl project has a **fully implemented Phase 1** with all hard
 - ✅ `ControlCommand` + `ControlEventType` - Unified event system
 - ✅ `PinMapping.h` - Complete GPIO and MCP23018 definitions
 - ✅ `Constants.h` - All hardware constants and defaults
-- ✅ FreeRTOS tasks: `SensorTask` (50ms), `IOTask` (20ms), `ControlTask`, `StatsTask`
+- ✅ FreeRTOS tasks: `SensorTask` (50ms), `IOTask` (20ms, interrupt-driven buttons), `ControlTask`, `StatsTask`
 - ✅ PlatformIO build system with all dependencies
 
 ---
@@ -257,6 +258,7 @@ enum ControlEventType {
 | ESC ramping timing | Low | Medium | Test with actual ESC, adjust periods |
 | Sensor threshold tuning | High | Medium | Make thresholds configurable |
 | I2C mutex contention | Low | Low | Already implemented, monitor if issues arise |
+| I2C bus lockup | Low | High | Hardware reset line (GPIO10) + `MoaMcpDevice::recover()` for automatic recovery |
 
 ---
 
@@ -321,4 +323,5 @@ enum ControlEventType {
 ---
 
 *Generated: 2026-02-05*  
+*Updated: 2026-02-06 - Interrupt-driven buttons, hardware reset, custom Adafruit_MCP23X18*  
 *Based on: Complete codebase analysis*
