@@ -26,8 +26,8 @@ MoaLedControl::~MoaLedControl() {
 }
 
 void MoaLedControl::begin() {
-    // Configure Port B pins 0-4 as outputs
-    _mcpDevice.configurePortB(MOA_LED_MASK, OUTPUT);
+    // Configure Port B pins 0-4 as outputs with pullups (open-drain)
+    _mcpDevice.configurePortB(MOA_LED_MASK, OUTPUT, MOA_LED_MASK);
     
     // Turn all LEDs off
     clearAllLeds();

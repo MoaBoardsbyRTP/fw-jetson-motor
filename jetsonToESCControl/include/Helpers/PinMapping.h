@@ -40,13 +40,13 @@
  * @brief Current sense (ADC input)
  * Connected to ACS759-200B Hall effect sensor output
  */
-#define PIN_CURRENT_SENSE       GPIO_NUM_4
+#define PIN_CURRENT_SENSE       GPIO_NUM_5
 
 /**
  * @brief Temperature sense (OneWire data)
  * Connected to DS18B20 temperature sensor
  */
-#define PIN_TEMP_SENSE          GPIO_NUM_5
+#define PIN_TEMP_SENSE          GPIO_NUM_6
 
 /**
  * @brief ESC PWM output

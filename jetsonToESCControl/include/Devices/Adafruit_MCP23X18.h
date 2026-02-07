@@ -28,6 +28,18 @@ public:
   // I2C initialization (MCP23018 is I2C only, no SPI)
   bool begin_I2C(uint8_t i2c_addr = MCP23XXX_ADDR, TwoWire *wire = &Wire);
 
+  // Override: MCP23018 allows pullup independent of direction
+  void pinMode(uint8_t pin, uint8_t mode);
+
+  // Independent pullup control (works on both input and output pins)
+  void setPullup(uint8_t pin, bool enabled);
+
+  // Port A configuration
+  void configGPIOA(uint8_t dir, uint8_t pullup);
+
+  // Port B configuration
+  void configGPIOB(uint8_t dir, uint8_t pullup);
+
   // Port A access
   uint8_t readGPIOA();
   void writeGPIOA(uint8_t value);

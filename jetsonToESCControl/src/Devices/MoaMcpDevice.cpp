@@ -121,8 +121,21 @@ void MoaMcpDevice::configurePortA(uint8_t mask, uint8_t mode) {
     for (uint8_t i = 0; i < 8; i++) {
         if (mask & (1 << i)) {
             _mcp.pinMode(i, mode);  // Port A pins are 0-7
+            _mcp.setPullup(i, mode == PULLUP);
         }
     }
+    
+    releaseMutex();
+}
+
+void MoaMcpDevice::configurePortA(uint8_t mask, uint8_t mode, uint8_t pullupMask) {
+    if (!acquireMutex()) {
+        return;
+    }
+    
+    // Build direction byte: 1=input, 0=output for masked pins
+    uint8_t dir = (mode == OUTPUT) ? ~mask : mask;
+    _mcp.configGPIOA(dir, pullupMask);
     
     releaseMutex();
 }
@@ -170,8 +183,21 @@ void MoaMcpDevice::configurePortB(uint8_t mask, uint8_t mode) {
     for (uint8_t i = 0; i < 8; i++) {
         if (mask & (1 << i)) {
             _mcp.pinMode(8 + i, mode);  // Port B pins are 8-15
+            _mcp.setPullup(8 + i, mode == PULLUP);
         }
     }
+    
+    releaseMutex();
+}
+
+void MoaMcpDevice::configurePortB(uint8_t mask, uint8_t mode, uint8_t pullupMask) {
+    if (!acquireMutex()) {
+        return;
+    }
+    
+    // Build direction byte: 1=input, 0=output for masked pins
+    uint8_t dir = (mode == OUTPUT) ? ~mask : mask;
+    _mcp.configGPIOB(dir, pullupMask);
     
     releaseMutex();
 }
@@ -182,6 +208,7 @@ void MoaMcpDevice::setPinMode(uint8_t pin, uint8_t mode) {
     }
     
     _mcp.pinMode(pin, mode);
+    _mcp.setPullup(pin, mode == PULLUP);
     
     releaseMutex();
 }

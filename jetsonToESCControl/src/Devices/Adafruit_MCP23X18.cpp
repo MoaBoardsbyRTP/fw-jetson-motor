@@ -32,6 +32,84 @@ bool Adafruit_MCP23X18::begin_I2C(uint8_t i2c_addr, TwoWire *wire) {
 
 /**************************************************************************/
 /*!
+    @brief  Configures the specified pin to behave either as an input or an
+    output. Unlike MCP23017, the MCP23018 allows pullups on output pins
+    (open-drain), so this override preserves the existing pullup state
+    when changing direction.
+    @param pin the pin number (0-15)
+    @param mode INPUT, OUTPUT, or INPUT_PULLUP
+*/
+/**************************************************************************/
+void Adafruit_MCP23X18::pinMode(uint8_t pin, uint8_t mode) {
+  Adafruit_BusIO_Register IODIR(i2c_dev, spi_dev, MCP23XXX_SPIREG,
+                                getRegister(MCP23XXX_IODIR, MCP_PORT(pin)));
+  Adafruit_BusIO_Register GPPU(i2c_dev, spi_dev, MCP23XXX_SPIREG,
+                               getRegister(MCP23XXX_GPPU, MCP_PORT(pin)));
+  Adafruit_BusIO_RegisterBits dir_bit(&IODIR, 1, pin % 8);
+  Adafruit_BusIO_RegisterBits pullup_bit(&GPPU, 1, pin % 8);
+
+  dir_bit.write((mode == OUTPUT) ? 0 : 1);
+
+  // Only change pullup if INPUT_PULLUP is explicitly requested or
+  // plain INPUT is set (disable pullup). For OUTPUT, leave pullup as-is.
+  if (mode == INPUT_PULLUP) {
+    pullup_bit.write(1);
+  } else if (mode == INPUT) {
+    pullup_bit.write(0);
+  }
+  // OUTPUT: pullup state is preserved — use setPullup() to control it
+}
+
+/**************************************************************************/
+/*!
+    @brief  Enable or disable the internal pullup resistor on a pin,
+    independent of pin direction. This is specific to MCP23018 which
+    supports pullups on both input and output (open-drain) pins.
+    @param pin the pin number (0-15)
+    @param enabled true to enable pullup, false to disable
+*/
+/**************************************************************************/
+void Adafruit_MCP23X18::setPullup(uint8_t pin, bool enabled) {
+  Adafruit_BusIO_Register GPPU(i2c_dev, spi_dev, MCP23XXX_SPIREG,
+                               getRegister(MCP23XXX_GPPU, MCP_PORT(pin)));
+  Adafruit_BusIO_RegisterBits pullup_bit(&GPPU, 1, pin % 8);
+  pullup_bit.write(enabled ? 1 : 0);
+}
+
+/**************************************************************************/
+/*!
+    @brief  Configure all Port A pins direction and pullups at once.
+    @param dir Bitmask for direction (1=input, 0=output)
+    @param pullup Bitmask for pullups (1=enabled, 0=disabled)
+*/
+/**************************************************************************/
+void Adafruit_MCP23X18::configGPIOA(uint8_t dir, uint8_t pullup) {
+  Adafruit_BusIO_Register IODIR(i2c_dev, spi_dev, MCP23XXX_SPIREG,
+                                getRegister(MCP23XXX_IODIR, 0));
+  Adafruit_BusIO_Register GPPU(i2c_dev, spi_dev, MCP23XXX_SPIREG,
+                               getRegister(MCP23XXX_GPPU, 0));
+  IODIR.write(dir);
+  GPPU.write(pullup);
+}
+
+/**************************************************************************/
+/*!
+    @brief  Configure all Port B pins direction and pullups at once.
+    @param dir Bitmask for direction (1=input, 0=output)
+    @param pullup Bitmask for pullups (1=enabled, 0=disabled)
+*/
+/**************************************************************************/
+void Adafruit_MCP23X18::configGPIOB(uint8_t dir, uint8_t pullup) {
+  Adafruit_BusIO_Register IODIR(i2c_dev, spi_dev, MCP23XXX_SPIREG,
+                                getRegister(MCP23XXX_IODIR, 1));
+  Adafruit_BusIO_Register GPPU(i2c_dev, spi_dev, MCP23XXX_SPIREG,
+                               getRegister(MCP23XXX_GPPU, 1));
+  IODIR.write(dir);
+  GPPU.write(pullup);
+}
+
+/**************************************************************************/
+/*!
     @brief  Read all pins on Port A.
     @return Current pin states of Port A as uint8_t.
 */
@@ -94,7 +172,11 @@ void Adafruit_MCP23X18::writeGPIOAB(uint16_t value) {
 */
 /**************************************************************************/
 uint8_t Adafruit_MCP23X18::readIntCapA() {
-  return (uint8_t)getRegister(MCP23XXX_INTCAP, 0);
+  Adafruit_BusIO_Register INTCAPA(i2c_dev, spi_dev, MCP23XXX_SPIREG,
+                                  getRegister(MCP23XXX_INTCAP, 0));
+  uint8_t value;
+  INTCAPA.read(&value);
+  return value;
 }
 
 /**************************************************************************/
@@ -108,7 +190,11 @@ uint8_t Adafruit_MCP23X18::readIntCapA() {
 */
 /**************************************************************************/
 uint8_t Adafruit_MCP23X18::readIntCapB() {
-  return (uint8_t)getRegister(MCP23XXX_INTCAP, 1);
+  Adafruit_BusIO_Register INTCAPB(i2c_dev, spi_dev, MCP23XXX_SPIREG,
+                                  getRegister(MCP23XXX_INTCAP, 1));
+  uint8_t value;
+  INTCAPB.read(&value);
+  return value;
 }
 
 /**************************************************************************/

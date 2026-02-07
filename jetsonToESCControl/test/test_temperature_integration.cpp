@@ -7,7 +7,7 @@ MoaTempControl* tempControl;
 void setUp(void) {
     // Create test queue
     testQueue = xQueueCreate(10, sizeof(ControlCommand));
-    tempControl = new MoaTempControl(testQueue, 4); // GPIO4 for DS18B20
+    tempControl = new MoaTempControl(testQueue, 6); // GPIO6 for DS18B20
 }
 
 void tearDown(void) {

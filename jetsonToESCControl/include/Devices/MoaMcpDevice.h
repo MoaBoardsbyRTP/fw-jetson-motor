@@ -152,6 +152,17 @@ public:
     void configurePortA(uint8_t mask, uint8_t mode);
 
     /**
+     * @brief Configure Port A pin modes with independent pullup control (thread-safe)
+     * 
+     * MCP23018-specific: allows pullups on output pins (open-drain).
+     * 
+     * @param mask Bitmask of pins to configure
+     * @param mode Pin mode (INPUT, OUTPUT)
+     * @param pullupMask Bitmask of pins to enable pullups on
+     */
+    void configurePortA(uint8_t mask, uint8_t mode, uint8_t pullupMask);
+
+    /**
      * @brief Enable interrupt-on-change for Port A pins (thread-safe)
      * 
      * @param mask Bitmask of pins to enable interrupts
@@ -190,6 +201,17 @@ public:
      * @param mode Pin mode (INPUT, INPUT_PULLUP, OUTPUT)
      */
     void configurePortB(uint8_t mask, uint8_t mode);
+
+    /**
+     * @brief Configure Port B pin modes with independent pullup control (thread-safe)
+     * 
+     * MCP23018-specific: allows pullups on output pins (open-drain).
+     * 
+     * @param mask Bitmask of pins to configure
+     * @param mode Pin mode (INPUT, OUTPUT)
+     * @param pullupMask Bitmask of pins to enable pullups on
+     */
+    void configurePortB(uint8_t mask, uint8_t mode, uint8_t pullupMask);
 
     // === General pin operations (thread-safe) ===
 
