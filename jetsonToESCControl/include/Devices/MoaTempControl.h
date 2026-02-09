@@ -54,6 +54,14 @@ enum class MoaTempState {
 };
 
 /**
+ * @brief DS18B20 conversion state for non-blocking reads
+ */
+enum class TempConvState {
+    IDLE,       ///< Ready to request a new conversion
+    WAITING     ///< Conversion in progress, waiting for result
+};
+
+/**
  * @brief Temperature control class with hysteresis-based events and averaging
  * 
  * MoaTempControl provides temperature monitoring using Dallas DS18B20 sensors with:
@@ -202,12 +210,16 @@ private:
     float _currentTemp;                    ///< Current raw temperature reading
     float _hysteresis;                     ///< Hysteresis value for lower threshold
     MoaTempState _state;                   ///< Current temperature state
+    TempConvState _convState;              ///< DS18B20 conversion state machine
+    uint32_t _convRequestTime;             ///< millis() when conversion was requested
+    uint16_t _convDelayMs;                 ///< Conversion time for current resolution
     
     float* _samples;                       ///< Circular buffer for temperature samples
     uint8_t _numSamples;                   ///< Number of samples for averaging
     uint8_t _sampleIndex;                  ///< Current index in circular buffer
     uint8_t _sampleCount;                  ///< Number of valid samples in buffer
     float _averagedTemp;                   ///< Cached averaged temperature
+    uint32_t _updateCount;                 ///< Counter for periodic logging
 
     /**
      * @brief Add a new sample to the circular buffer and update average

@@ -20,11 +20,15 @@ MoaTempControl::MoaTempControl(QueueHandle_t eventQueue, uint8_t pin,
     , _currentTemp(0.0f)
     , _hysteresis(0.0f)
     , _state(MoaTempState::BELOW_TARGET)
+    , _convState(TempConvState::IDLE)
+    , _convRequestTime(0)
+    , _convDelayMs(750)
     , _samples(nullptr)
     , _numSamples(0)
     , _sampleIndex(0)
     , _sampleCount(0)
     , _averagedTemp(0.0f)
+    , _updateCount(0)
 {
     setNumSamples(numSamples);
 }
@@ -38,11 +42,32 @@ MoaTempControl::~MoaTempControl() {
 
 void MoaTempControl::begin() {
     _sensors.begin();
-    ESP_LOGD(TAG, "Temperature sensor begin, devices found: %d", _sensors.getDeviceCount());
+    _sensors.setWaitForConversion(false);
+    _convDelayMs = _sensors.millisToWaitForConversion();
+    ESP_LOGI(TAG, "Temperature sensor begin, devices=%d, convMs=%d",
+             _sensors.getDeviceCount(), _convDelayMs);
 }
 
 void MoaTempControl::update() {
-    _sensors.requestTemperatures();
+    switch (_convState) {
+        case TempConvState::IDLE:
+            // Start a non-blocking conversion request
+            _sensors.requestTemperatures();
+            _convRequestTime = millis();
+            _convState = TempConvState::WAITING;
+            return;  // Come back next loop iteration
+
+        case TempConvState::WAITING:
+            // Check if conversion time has elapsed
+            if ((millis() - _convRequestTime) < _convDelayMs) {
+                return;  // Not ready yet, let other sensors run
+            }
+            // Conversion done — read result and fall through to processing
+            _convState = TempConvState::IDLE;
+            break;
+    }
+
+    // Read the converted temperature
     _currentTemp = _sensors.getTempCByIndex(0);
     
     // Skip invalid readings (sensor disconnected or error)
@@ -53,6 +78,13 @@ void MoaTempControl::update() {
     
     // Add sample to circular buffer and update average
     addSample(_currentTemp);
+    
+    // Periodic log (1 in 10 readings)
+    if (++_updateCount % 10 == 0) {
+        ESP_LOGI(TAG, "T=%.1fC avg=%.1fC state=%s",
+                 _currentTemp, _averagedTemp,
+                 _state == MoaTempState::ABOVE_TARGET ? "ABOVE" : "BELOW");
+    }
     
     // Push stats reading to telemetry queue
     pushStatsReading();

@@ -29,6 +29,7 @@ MoaBattControl::MoaBattControl(QueueHandle_t eventQueue, uint8_t adcPin,
     , _sampleIndex(0)
     , _sampleCount(0)
     , _averagedVoltage(0.0f)
+    , _updateCount(0)
 {
     setNumSamples(numSamples);
 }
@@ -52,6 +53,14 @@ void MoaBattControl::update() {
     
     // Add sample to circular buffer and update average
     addSample(_currentVoltage);
+    
+    // Periodic log (1 in 100 readings, ~5s at 50ms task period)
+    if (++_updateCount % 100 == 0) {
+        ESP_LOGI(TAG, "V=%.3fV avg=%.3fV raw=%d level=%s",
+                 _currentVoltage, _averagedVoltage, _rawAdc,
+                 _level == MoaBattLevel::BATT_LOW ? "LOW" :
+                 _level == MoaBattLevel::BATT_MEDIUM ? "MED" : "HIGH");
+    }
     
     // Push stats reading to telemetry queue
     pushStatsReading();

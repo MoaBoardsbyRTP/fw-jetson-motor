@@ -31,6 +31,7 @@ MoaCurrentControl::MoaCurrentControl(QueueHandle_t eventQueue, uint8_t adcPin,
     , _sampleIndex(0)
     , _sampleCount(0)
     , _averagedCurrent(0.0f)
+    , _updateCount(0)
 {
     setNumSamples(numSamples);
 }
@@ -56,6 +57,14 @@ void MoaCurrentControl::update() {
     
     // Add sample to circular buffer and update average
     addSample(_currentReading);
+    
+    // Periodic log (1 in 100 readings, ~5s at 50ms task period)
+    if (++_updateCount % 100 == 0) {
+        ESP_LOGI(TAG, "I=%.1fA avg=%.1fA raw=%d state=%s",
+                 _currentReading, _averagedCurrent, _rawAdc,
+                 _state == MoaCurrentState::NORMAL ? "NORMAL" :
+                 _state == MoaCurrentState::OVERCURRENT ? "OVER" : "REVERSE");
+    }
     
     // Push stats reading to telemetry queue
     pushStatsReading();

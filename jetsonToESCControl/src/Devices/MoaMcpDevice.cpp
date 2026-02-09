@@ -128,7 +128,7 @@ void MoaMcpDevice::configurePortA(uint8_t mask, uint8_t mode) {
     for (uint8_t i = 0; i < 8; i++) {
         if (mask & (1 << i)) {
             _mcp.pinMode(i, mode);  // Port A pins are 0-7
-            _mcp.setPullup(i, mode == PULLUP);
+            _mcp.setPullup(i, (mode & PULLUP) != 0);
         }
     }
     
@@ -190,7 +190,7 @@ void MoaMcpDevice::configurePortB(uint8_t mask, uint8_t mode) {
     for (uint8_t i = 0; i < 8; i++) {
         if (mask & (1 << i)) {
             _mcp.pinMode(8 + i, mode);  // Port B pins are 8-15
-            _mcp.setPullup(8 + i, mode == PULLUP);
+            _mcp.setPullup(8 + i, (mode & PULLUP) != 0);
         }
     }
     

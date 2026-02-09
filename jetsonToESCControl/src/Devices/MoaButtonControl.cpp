@@ -78,40 +78,32 @@ void IRAM_ATTR MoaButtonControl::handleInterrupt() {
 }
 
 void MoaButtonControl::processInterrupt() {
-    // Check and clear interrupt flag (single consumer in IOTask, ISR only sets)
-    if (!_interruptPending) {
-        return;
-    }
     _interruptPending = false;
     
     uint32_t now = millis();
     
-    // Check if we're still in debounce window
-    if (now < _debounceUntil) {
-        // Still debouncing - ignore this interrupt but clear MCP interrupt
-        // by reading the capture register
-        _mcpDevice.readInterruptCapturePortA();
-        return;
-    }
+    // Read INTCAPA to see what triggered the interrupt
+    _mcpDevice.readInterruptCapturePortA();
     
-    // Read INTCAPA to get state at interrupt time and clear MCP interrupt
-    uint8_t capturedState = _mcpDevice.readInterruptCapturePortA();
+    // Read current GPIO state — this is what matters for detecting
+    // press/release AND it fully clears the MCP23018 interrupt
+    uint8_t currentState = _mcpDevice.readPortA();
     
-    // Process only the buttons that changed (based on captured state vs last debounced)
+    // Process each button using current state
     for (uint8_t i = 0; i < MOA_BUTTON_COUNT; i++) {
         uint8_t pin = BUTTON_PIN_STOP + i;
-        bool capturedPressed = !(capturedState & (1 << pin));  // Active LOW
+        bool currentPressed = !(currentState & (1 << pin));  // Active LOW
         
         // Only process if state actually changed from our debounced view
-        if (capturedPressed != _buttons[i].isPressed) {
-            processButtonFromInterrupt(i, capturedPressed, now);
+        if (currentPressed != _buttons[i].isPressed) {
+            // Debounce check
+            if ((now - _buttons[i].lastChangeTime) >= _debounceMs) {
+                processButtonFromInterrupt(i, currentPressed, now);
+            }
         }
     }
     
-    _lastRawState = capturedState;
-    
-    // Set debounce window - ignore further interrupts for debounce period
-    _debounceUntil = now + _debounceMs;
+    _lastRawState = currentState;
 }
 
 void MoaButtonControl::processButtonFromInterrupt(uint8_t index, bool isPressed, uint32_t now) {
@@ -134,8 +126,7 @@ void MoaButtonControl::processButtonFromInterrupt(uint8_t index, bool isPressed,
         _debouncedState |= (1 << index);
     } else {
         // Button just released
-        // Optionally push release event (currently not used)
-        // pushButtonEvent(pinToCommandId(index), BUTTON_EVENT_RELEASE);
+        ESP_LOGI(TAG, "Button %d released (interrupt)", index);
         
         // Update debounced state bitmask
         _debouncedState &= ~(1 << index);
@@ -143,7 +134,16 @@ void MoaButtonControl::processButtonFromInterrupt(uint8_t index, bool isPressed,
 }
 
 bool MoaButtonControl::isInterruptPending() {
-    return _interruptPending || (millis() < _debounceUntil);
+    // Check ISR flag OR hardware pin still asserted (stuck LOW = missed edge)
+    if (_interruptPending) {
+        return true;
+    }
+    if (digitalRead(_intPin) == LOW) {
+        // INTA still asserted — ISR missed the FALLING edge
+        // (happens when interrupt fires while we're still processing)
+        return true;
+    }
+    return false;
 }
 
 void MoaButtonControl::checkLongPress() {

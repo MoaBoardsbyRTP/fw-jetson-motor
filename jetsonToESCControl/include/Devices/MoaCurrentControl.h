@@ -324,6 +324,7 @@ private:
     uint8_t _sampleIndex;              ///< Current index in circular buffer
     uint8_t _sampleCount;              ///< Number of valid samples in buffer
     float _averagedCurrent;            ///< Cached averaged current
+    uint32_t _updateCount;             ///< Counter for periodic logging
 
     /**
      * @brief Add a new sample to the circular buffer and update average
