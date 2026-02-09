@@ -6,6 +6,9 @@
  */
 
 #include "MoaTempControl.h"
+#include "esp_log.h"
+
+static const char* TAG = "Temp";
 
 MoaTempControl::MoaTempControl(QueueHandle_t eventQueue, uint8_t pin,
                                uint8_t numSamples)
@@ -35,6 +38,7 @@ MoaTempControl::~MoaTempControl() {
 
 void MoaTempControl::begin() {
     _sensors.begin();
+    ESP_LOGD(TAG, "Temperature sensor begin, devices found: %d", _sensors.getDeviceCount());
 }
 
 void MoaTempControl::update() {
@@ -43,6 +47,7 @@ void MoaTempControl::update() {
     
     // Skip invalid readings (sensor disconnected or error)
     if (_currentTemp == DEVICE_DISCONNECTED_C) {
+        ESP_LOGW(TAG, "Temperature sensor disconnected!");
         return;
     }
     
@@ -65,10 +70,12 @@ void MoaTempControl::update() {
     if (_state == MoaTempState::BELOW_TARGET && _averagedTemp >= upperThreshold) {
         // Crossed UP above target
         _state = MoaTempState::ABOVE_TARGET;
+        ESP_LOGW(TAG, "State -> ABOVE_TARGET (avg=%.1fC, target=%.1fC)", _averagedTemp, _targetTemp);
         pushTempEvent(COMMAND_TEMP_CROSSED_ABOVE);
     } else if (_state == MoaTempState::ABOVE_TARGET && _averagedTemp <= lowerThreshold) {
         // Crossed DOWN below (target - hysteresis)
         _state = MoaTempState::BELOW_TARGET;
+        ESP_LOGI(TAG, "State -> BELOW_TARGET (avg=%.1fC, lower=%.1fC)", _averagedTemp, lowerThreshold);
         pushTempEvent(COMMAND_TEMP_CROSSED_BELOW);
     }
 }

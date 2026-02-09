@@ -6,6 +6,9 @@
  */
 
 #include "MoaButtonControl.h"
+#include "esp_log.h"
+
+static const char* TAG = "Button";
 
 // Global instance pointer for ISR access
 MoaButtonControl* g_moaButtonControlInstance = nullptr;
@@ -47,6 +50,7 @@ MoaButtonControl::~MoaButtonControl() {
 }
 
 void MoaButtonControl::begin(bool useInterrupt) {
+    ESP_LOGD(TAG, "Button begin (interrupt=%s, intPin=%d)", useInterrupt ? "true" : "false", _intPin);
     // Configure Port A pins 1-5 as inputs with pull-ups
     _mcpDevice.configurePortA(MOA_BUTTON_MASK, INPUT_PULLUP);
     
@@ -66,6 +70,7 @@ void MoaButtonControl::begin(bool useInterrupt) {
     
     // Read initial state
     _lastRawState = _mcpDevice.readPortA();
+    ESP_LOGD(TAG, "Initial button state: 0x%02X", _lastRawState);
 }
 
 void IRAM_ATTR MoaButtonControl::handleInterrupt() {
@@ -121,6 +126,7 @@ void MoaButtonControl::processButtonFromInterrupt(uint8_t index, bool isPressed,
         btn.pressStartTime = now;
         btn.longPressFired = false;
         
+        ESP_LOGI(TAG, "Button %d pressed (interrupt)", index);
         // Push press event
         pushButtonEvent(pinToCommandId(index), BUTTON_EVENT_PRESS);
         
@@ -155,6 +161,7 @@ void MoaButtonControl::checkLongPress() {
             // Button is held - check for long press
             if ((now - btn.pressStartTime) >= _longPressMs) {
                 btn.longPressFired = true;
+                ESP_LOGI(TAG, "Button %d long press detected", i);
                 pushButtonEvent(pinToCommandId(i), BUTTON_EVENT_LONG_PRESS);
             }
         }

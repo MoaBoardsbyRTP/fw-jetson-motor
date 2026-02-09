@@ -6,6 +6,9 @@
  */
 
 #include "MoaFlashLog.h"
+#include "esp_log.h"
+
+static const char* TAG = "FlashLog";
 
 MoaFlashLog::MoaFlashLog(const char* filename)
     : _filename(filename)
@@ -30,8 +33,10 @@ MoaFlashLog::~MoaFlashLog() {
 
 bool MoaFlashLog::begin() {
     if (!LittleFS.begin(true)) {  // true = format if mount fails
+        ESP_LOGE(TAG, "LittleFS mount failed!");
         return false;
     }
+    ESP_LOGD(TAG, "LittleFS mounted");
     
     _initialized = loadFromFlash();
     if (!_initialized) {
@@ -40,6 +45,9 @@ bool MoaFlashLog::begin() {
         _writeIndex = 0;
         _oldestIndex = 0;
         _initialized = true;
+        ESP_LOGD(TAG, "Starting fresh log");
+    } else {
+        ESP_LOGD(TAG, "Loaded %d entries from flash", _entryCount);
     }
     
     _lastFlushTime = millis();
@@ -142,6 +150,9 @@ void MoaFlashLog::flush() {
     if (saveToFlash()) {
         _dirty = false;
         _lastFlushTime = millis();
+        ESP_LOGD(TAG, "Flushed %d entries to flash", _entryCount);
+    } else {
+        ESP_LOGE(TAG, "Flash write failed!");
     }
 }
 

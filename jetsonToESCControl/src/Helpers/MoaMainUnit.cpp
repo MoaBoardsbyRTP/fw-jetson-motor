@@ -7,6 +7,9 @@
 
 #include "MoaMainUnit.h"
 #include "Tasks.h"
+#include "esp_log.h"
+
+static const char* TAG = "MainUnit";
 
 MoaMainUnit::MoaMainUnit()
     : _eventQueue(nullptr)
@@ -35,21 +38,23 @@ MoaMainUnit::~MoaMainUnit() {
 void MoaMainUnit::begin() {
     // Initialize Serial
     Serial.begin(115200);
-    Serial.println("Moa ESC Controller starting...");
+    ESP_LOGI(TAG, "Moa ESC Controller starting...");
 
     // Create event queue FIRST (producers need it)
     _eventQueue = xQueueCreate(EVENT_QUEUE_SIZE, sizeof(ControlCommand));
     if (_eventQueue == nullptr) {
-        Serial.println("ERROR: Failed to create event queue!");
+        ESP_LOGE(TAG, "Failed to create event queue!");
         return;
     }
+    ESP_LOGD(TAG, "Event queue created (size=%d)", EVENT_QUEUE_SIZE);
 
     // Create stats queue for telemetry
     _statsQueue = xQueueCreate(STATS_QUEUE_SIZE, sizeof(StatsReading));
     if (_statsQueue == nullptr) {
-        Serial.println("ERROR: Failed to create stats queue!");
+        ESP_LOGE(TAG, "Failed to create stats queue!");
         return;
     }
+    ESP_LOGD(TAG, "Stats queue created (size=%d)", STATS_QUEUE_SIZE);
 
     // Initialize stats aggregator
     _statsAggregator.begin();
@@ -77,7 +82,7 @@ void MoaMainUnit::begin() {
     // Log boot event
     _flashLog.logSystem(LOG_SYS_BOOT);
 
-    Serial.println("Moa ESC Controller ready.");
+    ESP_LOGI(TAG, "Moa ESC Controller ready.");
 }
 
 QueueHandle_t MoaMainUnit::getEventQueue() {
@@ -122,47 +127,47 @@ MoaStatsAggregator& MoaMainUnit::getStatsAggregator() {
 
 void MoaMainUnit::initI2C() {
     Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
-    Serial.println("I2C initialized.");
+    ESP_LOGI(TAG, "I2C initialized (SDA=%d, SCL=%d)", PIN_I2C_SDA, PIN_I2C_SCL);
 }
 
 void MoaMainUnit::initHardware() {
     // Initialize MCP23018
     if (_mcpDevice.begin(&Wire)) {
-        Serial.println("MCP23018 initialized.");
+        ESP_LOGI(TAG, "MCP23018 initialized");
     } else {
-        Serial.println("WARNING: MCP23018 initialization failed!");
+        ESP_LOGW(TAG, "MCP23018 initialization failed!");
     }
 
     // Initialize temperature sensor
     _tempControl.begin();
-    Serial.println("Temperature sensor initialized.");
+    ESP_LOGI(TAG, "Temperature sensor initialized");
 
     // Initialize battery monitor
     _battControl.begin();
-    Serial.println("Battery monitor initialized.");
+    ESP_LOGI(TAG, "Battery monitor initialized");
 
     // Initialize current sensor
     _currentControl.begin();
-    Serial.println("Current sensor initialized.");
+    ESP_LOGI(TAG, "Current sensor initialized");
 
     // Initialize button input with interrupt mode enabled
     _buttonControl.begin(true);  // Interrupt-driven mode
-    Serial.println("Button input initialized (interrupt mode).");
+    ESP_LOGI(TAG, "Button input initialized (interrupt mode)");
 
     // Initialize LED output
     _ledControl.begin();
-    Serial.println("LED output initialized.");
+    ESP_LOGI(TAG, "LED output initialized");
 
     // Initialize flash log
     if (_flashLog.begin()) {
-        Serial.println("Flash log initialized.");
+        ESP_LOGI(TAG, "Flash log initialized");
     } else {
-        Serial.println("WARNING: Flash log initialization failed!");
+        ESP_LOGW(TAG, "Flash log initialization failed!");
     }
 
     // Initialize ESC
     _escController.begin();
-    Serial.println("ESC controller initialized.");
+    ESP_LOGI(TAG, "ESC controller initialized (pin=%d, freq=%d)", PIN_ESC_PWM, ESC_PWM_FREQUENCY);
 }
 
 void MoaMainUnit::applyConfiguration() {
@@ -191,7 +196,11 @@ void MoaMainUnit::applyConfiguration() {
     // Flash log configuration
     _flashLog.setFlushInterval(LOG_FLUSH_INTERVAL_MS);
 
-    Serial.println("Configuration applied.");
+    ESP_LOGI(TAG, "Configuration applied");
+    ESP_LOGD(TAG, "  Batt: divider=%.2f, low=%.2fV, high=%.2fV, hyst=%.2fV", BATT_DIVIDER_RATIO, BATT_THRESHOLD_LOW, BATT_THRESHOLD_HIGH, BATT_HYSTERESIS);
+    ESP_LOGD(TAG, "  Current: sens=%.4f, offset=%.2f, OC=%.1fA, rev=%.1fA, hyst=%.1fA", CURRENT_SENSOR_SENSITIVITY, CURRENT_SENSOR_OFFSET, CURRENT_THRESHOLD_OVERCURRENT, CURRENT_THRESHOLD_REVERSE, CURRENT_HYSTERESIS);
+    ESP_LOGD(TAG, "  Temp: target=%.1fC, hyst=%.1fC", TEMP_THRESHOLD_TARGET, TEMP_HYSTERESIS);
+    ESP_LOGD(TAG, "  Button: debounce=%dms, longPress=%dms", BUTTON_DEBOUNCE_MS, BUTTON_LONG_PRESS_MS);
 }
 
 void MoaMainUnit::createTasks() {
@@ -205,7 +214,7 @@ void MoaMainUnit::createTasks() {
         &_sensorTaskHandle,
         0  // Core 0 (ESP32-C3 is single-core)
     );
-    Serial.println("SensorTask created.");
+    ESP_LOGI(TAG, "SensorTask created (stack=%d, prio=%d)", TASK_STACK_SENSOR, TASK_PRIORITY_SENSOR);
 
     // Create IOTask
     xTaskCreatePinnedToCore(
@@ -217,7 +226,7 @@ void MoaMainUnit::createTasks() {
         &_ioTaskHandle,
         0
     );
-    Serial.println("IOTask created.");
+    ESP_LOGI(TAG, "IOTask created (stack=%d, prio=%d)", TASK_STACK_IO, TASK_PRIORITY_IO);
 
     // Create ControlTask
     xTaskCreatePinnedToCore(
@@ -229,7 +238,7 @@ void MoaMainUnit::createTasks() {
         &_controlTaskHandle,
         0
     );
-    Serial.println("ControlTask created.");
+    ESP_LOGI(TAG, "ControlTask created (stack=%d, prio=%d)", TASK_STACK_CONTROL, TASK_PRIORITY_CONTROL);
 
     // Create StatsTask
     xTaskCreatePinnedToCore(
@@ -241,5 +250,5 @@ void MoaMainUnit::createTasks() {
         &_statsTaskHandle,
         0
     );
-    Serial.println("StatsTask created.");
+    ESP_LOGI(TAG, "StatsTask created (stack=%d, prio=%d)", TASK_STACK_STATS, TASK_PRIORITY_STATS);
 }

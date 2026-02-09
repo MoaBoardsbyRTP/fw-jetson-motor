@@ -6,6 +6,9 @@
  */
 
 #include "MoaBattControl.h"
+#include "esp_log.h"
+
+static const char* TAG = "Batt";
 
 MoaBattControl::MoaBattControl(QueueHandle_t eventQueue, uint8_t adcPin,
                                uint8_t numSamples)
@@ -40,6 +43,7 @@ MoaBattControl::~MoaBattControl() {
 void MoaBattControl::begin() {
     pinMode(_adcPin, INPUT);
     analogReadResolution(_adcResolution);
+    ESP_LOGD(TAG, "Battery monitor begin (pin=%d, res=%d bits)", _adcPin, _adcResolution);
 }
 
 void MoaBattControl::update() {
@@ -95,12 +99,15 @@ void MoaBattControl::update() {
     if (_level != previousLevel) {
         switch (_level) {
             case MoaBattLevel::BATT_LOW:
+                ESP_LOGW(TAG, "Level -> LOW (avg=%.3fV, threshold=%.3fV)", _averagedVoltage, _lowThreshold);
                 pushBattEvent(COMMAND_BATT_LEVEL_LOW);
                 break;
             case MoaBattLevel::BATT_MEDIUM:
+                ESP_LOGI(TAG, "Level -> MEDIUM (avg=%.3fV)", _averagedVoltage);
                 pushBattEvent(COMMAND_BATT_LEVEL_MEDIUM);
                 break;
             case MoaBattLevel::BATT_HIGH:
+                ESP_LOGI(TAG, "Level -> HIGH (avg=%.3fV)", _averagedVoltage);
                 pushBattEvent(COMMAND_BATT_LEVEL_HIGH);
                 break;
         }

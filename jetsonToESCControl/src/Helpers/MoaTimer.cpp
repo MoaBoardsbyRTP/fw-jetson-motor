@@ -6,6 +6,9 @@
  */
 
 #include "MoaTimer.h"
+#include "esp_log.h"
+
+static const char* TAG = "Timer";
 
 MoaTimer::MoaTimer(QueueHandle_t eventQueue, uint8_t timerId, const char* name)
     : _timerHandle(nullptr)
@@ -37,11 +40,13 @@ MoaTimer::~MoaTimer() {
 
 bool MoaTimer::start(uint32_t durationMs, bool autoReload) {
     if (_timerHandle == nullptr) {
+        ESP_LOGE(TAG, "Timer %d: handle is null!", _timerId);
         return false;
     }
 
     _durationMs = durationMs;
     _autoReload = autoReload;
+    ESP_LOGD(TAG, "Timer %d: start (duration=%dms, autoReload=%s)", _timerId, durationMs, autoReload ? "true" : "false");
 
     // Stop timer if running
     if (xTimerIsTimerActive(_timerHandle)) {
@@ -69,6 +74,7 @@ bool MoaTimer::stop() {
         return false;
     }
 
+    ESP_LOGD(TAG, "Timer %d: stop", _timerId);
     return xTimerStop(_timerHandle, portMAX_DELAY) == pdPASS;
 }
 
@@ -124,8 +130,10 @@ void MoaTimer::timerCallback(TimerHandle_t xTimer) {
 
 void MoaTimer::pushTimerEvent() {
     if (_eventQueue == nullptr) {
+        ESP_LOGW(TAG, "Timer %d: event queue is null!", _timerId);
         return;
     }
+    ESP_LOGD(TAG, "Timer %d: expired, pushing event", _timerId);
 
     ControlCommand cmd;
     cmd.controlType = CONTROL_TYPE_TIMER;

@@ -6,6 +6,9 @@
  */
 
 #include "MoaMcpDevice.h"
+#include "esp_log.h"
+
+static const char* TAG = "MCP";
 
 MoaMcpDevice::MoaMcpDevice(uint8_t i2cAddr)
     : _i2cAddr(i2cAddr)
@@ -17,6 +20,7 @@ MoaMcpDevice::MoaMcpDevice(uint8_t i2cAddr)
 }
 
 void MoaMcpDevice::hardwareReset() {
+    ESP_LOGD(TAG, "Hardware reset (pin=%d)", _resetPin);
     // Configure reset pin as output if not already done
     pinMode(_resetPin, OUTPUT);
     
@@ -30,6 +34,7 @@ void MoaMcpDevice::hardwareReset() {
 }
 
 bool MoaMcpDevice::recover(TwoWire* wire) {
+    ESP_LOGW(TAG, "Attempting MCP23018 recovery...");
     // Attempt hardware reset
     hardwareReset();
     
@@ -39,6 +44,7 @@ bool MoaMcpDevice::recover(TwoWire* wire) {
     }
     
     _initialized = _mcp.begin_I2C(_i2cAddr, wire);
+    ESP_LOGI(TAG, "Recovery %s", _initialized ? "succeeded" : "FAILED");
     
     releaseMutex();
     return _initialized;
@@ -77,6 +83,7 @@ bool MoaMcpDevice::begin(TwoWire* wire) {
     }
     
     _initialized = _mcp.begin_I2C(_i2cAddr, wire);
+    ESP_LOGI(TAG, "MCP23018 begin: %s (addr=0x%02X)", _initialized ? "OK" : "FAILED", _i2cAddr);
     
     releaseMutex();
     return _initialized;
@@ -236,9 +243,14 @@ bool MoaMcpDevice::readPin(uint8_t pin) {
 
 bool MoaMcpDevice::acquireMutex() {
     if (_mutex == nullptr) {
+        ESP_LOGE(TAG, "Mutex is null!");
         return false;
     }
-    return xSemaphoreTake(_mutex, pdMS_TO_TICKS(_mutexTimeoutMs)) == pdTRUE;
+    bool acquired = xSemaphoreTake(_mutex, pdMS_TO_TICKS(_mutexTimeoutMs)) == pdTRUE;
+    if (!acquired) {
+        ESP_LOGW(TAG, "Mutex acquire timeout (%dms)", _mutexTimeoutMs);
+    }
+    return acquired;
 }
 
 void MoaMcpDevice::releaseMutex() {

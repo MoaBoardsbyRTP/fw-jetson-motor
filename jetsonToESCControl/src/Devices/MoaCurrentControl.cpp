@@ -6,6 +6,9 @@
  */
 
 #include "MoaCurrentControl.h"
+#include "esp_log.h"
+
+static const char* TAG = "Current";
 
 MoaCurrentControl::MoaCurrentControl(QueueHandle_t eventQueue, uint8_t adcPin,
                                      uint8_t numSamples)
@@ -40,8 +43,11 @@ MoaCurrentControl::~MoaCurrentControl() {
 }
 
 void MoaCurrentControl::begin() {
+    gpio_set_direction(GPIO_NUM_5, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(GPIO_NUM_5, GPIO_FLOATING);
     pinMode(_adcPin, INPUT);
     analogReadResolution(_adcResolution);
+    ESP_LOGD(TAG, "Current sensor begin (pin=%d, res=%d bits)", _adcPin, _adcResolution);
 }
 
 void MoaCurrentControl::update() {
@@ -97,12 +103,15 @@ void MoaCurrentControl::update() {
     if (_state != previousState) {
         switch (_state) {
             case MoaCurrentState::NORMAL:
+                ESP_LOGI(TAG, "State -> NORMAL (avg=%.1fA)", _averagedCurrent);
                 pushCurrentEvent(COMMAND_CURRENT_NORMAL);
                 break;
             case MoaCurrentState::OVERCURRENT:
+                ESP_LOGW(TAG, "State -> OVERCURRENT (avg=%.1fA, threshold=%.1fA)", _averagedCurrent, _overcurrentThreshold);
                 pushCurrentEvent(COMMAND_CURRENT_OVERCURRENT);
                 break;
             case MoaCurrentState::REVERSE_OVERCURRENT:
+                ESP_LOGW(TAG, "State -> REVERSE_OVERCURRENT (avg=%.1fA, threshold=%.1fA)", _averagedCurrent, _reverseOvercurrentThreshold);
                 pushCurrentEvent(COMMAND_CURRENT_REVERSE_OVERCURRENT);
                 break;
         }

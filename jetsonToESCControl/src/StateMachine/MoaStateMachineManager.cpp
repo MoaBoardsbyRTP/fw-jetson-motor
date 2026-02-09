@@ -7,6 +7,9 @@
 
 #include "MoaStateMachineManager.h"
 #include "MoaButtonControl.h"  // For COMMAND_BUTTON_* defines
+#include "esp_log.h"
+
+static const char* TAG = "SMManager";
 
 MoaStateMachineManager::MoaStateMachineManager(MoaDevicesManager& devices)
     : _stateMachine(devices)
@@ -18,6 +21,7 @@ MoaStateMachineManager::~MoaStateMachineManager() {
 }
 
 void MoaStateMachineManager::setInitialState() {
+    ESP_LOGI(TAG, "Setting initial state");
     _stateMachine.setState(_stateMachine.getInitState());
 }
 
@@ -44,7 +48,7 @@ void MoaStateMachineManager::handleEvent(ControlCommand cmd) {
             break;
             
         default:
-            // Unknown control type - ignore
+            ESP_LOGW(TAG, "Unknown control type: %d", cmd.controlType);
             break;
     }
     
@@ -53,10 +57,12 @@ void MoaStateMachineManager::handleEvent(ControlCommand cmd) {
 }
 
 void MoaStateMachineManager::handleTimerEvent(ControlCommand& cmd) {
+    ESP_LOGD(TAG, "Timer event: timerId=%d", cmd.commandType);
     _stateMachine.timerExpired(cmd);
 }
 
 void MoaStateMachineManager::handleTemperatureEvent(ControlCommand& cmd) {
+    ESP_LOGI(TAG, "Temperature event: %s (%.1fC)", (cmd.commandType == 1) ? "ABOVE" : "BELOW", cmd.value / 10.0f);
     // Log the event
     _devices.logTemp(cmd.commandType, static_cast<int16_t>(cmd.value));
     
@@ -73,6 +79,9 @@ void MoaStateMachineManager::handleTemperatureEvent(ControlCommand& cmd) {
 }
 
 void MoaStateMachineManager::handleBatteryEvent(ControlCommand& cmd) {
+    ESP_LOGI(TAG, "Battery event: level=%s (%.3fV)",
+        (cmd.commandType == 1) ? "HIGH" : (cmd.commandType == 2) ? "MEDIUM" : "LOW",
+        cmd.value / 1000.0f);
     // Log the event
     _devices.logBatt(cmd.commandType, static_cast<int16_t>(cmd.value));
     
@@ -98,6 +107,9 @@ void MoaStateMachineManager::handleBatteryEvent(ControlCommand& cmd) {
 }
 
 void MoaStateMachineManager::handleCurrentEvent(ControlCommand& cmd) {
+    ESP_LOGI(TAG, "Current event: %s (%.1fA)",
+        (cmd.commandType == 1) ? "NORMAL" : (cmd.commandType == 2) ? "OVERCURRENT" : "REVERSE",
+        cmd.value / 10.0f);
     // Log the event
     _devices.logCurrent(cmd.commandType, static_cast<int16_t>(cmd.value));
     
@@ -114,6 +126,10 @@ void MoaStateMachineManager::handleCurrentEvent(ControlCommand& cmd) {
 }
 
 void MoaStateMachineManager::handleButtonEvent(ControlCommand& cmd) {
+    ESP_LOGI(TAG, "Button event: cmdId=%d, eventType=%s",
+        cmd.commandType,
+        (cmd.value == BUTTON_EVENT_PRESS) ? "PRESS" :
+        (cmd.value == BUTTON_EVENT_LONG_PRESS) ? "LONG_PRESS" : "RELEASE");
     // Log the event
     // Convert button command to log code
     uint8_t logCode = cmd.commandType;  // COMMAND_BUTTON_STOP=1, etc.

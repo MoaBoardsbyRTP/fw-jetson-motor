@@ -13,9 +13,14 @@
 
 #include "Tasks.h"
 #include "MoaMainUnit.h"
+#include "esp_log.h"
+
+static const char* TAG = "IOTask";
 
 void IOTask(void* pvParameters) {
     MoaMainUnit* unit = static_cast<MoaMainUnit*>(pvParameters);
+    
+    ESP_LOGI(TAG, "IOTask started");
     
     for (;;) {
         // Process button interrupt if pending

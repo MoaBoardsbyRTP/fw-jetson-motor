@@ -6,6 +6,9 @@
  */
 
 #include "ESCController.h"
+#include "esp_log.h"
+
+static const char* TAG = "ESC";
 
 ESCController::ESCController(uint8_t pin, uint8_t channel, uint16_t frequency){
     _pin = pin;
@@ -25,6 +28,7 @@ ESCController::ESCController(uint8_t pin, uint8_t channel, uint16_t frequency){
 void ESCController::begin(){
     ledcSetup(_channel, _frequency, _resolution);
     ledcAttachPin(_pin, _channel);
+    ESP_LOGI(TAG, "ESC begin (pin=%d, ch=%d, freq=%d, res=%d)", _pin, _channel, _frequency, _resolution);
 }
 
 void ESCController::writeThrottle(){
@@ -32,6 +36,7 @@ void ESCController::writeThrottle(){
 }
 
 void ESCController::stop(){
+    ESP_LOGI(TAG, "ESC stop");
     setThrottle(_minThrottle);
     writeThrottle();
 }
@@ -46,12 +51,14 @@ void ESCController::updateThrottle(){
         if(_currentThrottle >= _targetThrottle){
             _currentThrottle = _targetThrottle;
             _ramping = false;
+            ESP_LOGD(TAG, "Ramp up complete (throttle=%d)", _currentThrottle);
         }
     } else if(_rampStep < 0){
         _currentThrottle += _rampStep;
         if(_currentThrottle <= _targetThrottle){
             _currentThrottle = _targetThrottle;
             _ramping = false;
+            ESP_LOGD(TAG, "Ramp down complete (throttle=%d)", _currentThrottle);
         }
     } else {
         _currentThrottle = _targetThrottle;
@@ -77,6 +84,7 @@ void ESCController::setThrottle(uint16_t throttle){
 }
 
 void ESCController::setRampThrottle(uint16_t rampTime, uint16_t targetThrottle){
+    ESP_LOGI(TAG, "Ramp set: target=%d, time=%d, current=%d", targetThrottle, rampTime, _currentThrottle);
     _targetThrottle = targetThrottle;
     
     if(_targetThrottle > _maxThrottle){

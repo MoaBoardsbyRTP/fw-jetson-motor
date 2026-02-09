@@ -6,6 +6,9 @@
  */
 
 #include "MoaLedControl.h"
+#include "esp_log.h"
+
+static const char* TAG = "LED";
 
 MoaLedControl::MoaLedControl(MoaMcpDevice& mcpDevice)
     : _mcpDevice(mcpDevice)
@@ -31,6 +34,7 @@ void MoaLedControl::begin() {
     
     // Turn all LEDs off
     clearAllLeds();
+    ESP_LOGD(TAG, "LED control initialized (mask=0x%02X)", MOA_LED_MASK);
 }
 
 void MoaLedControl::update() {
@@ -125,6 +129,9 @@ void MoaLedControl::setOvercurrentLed(bool state) {
 }
 
 void MoaLedControl::setBatteryLevel(MoaBattLevel level) {
+    ESP_LOGD(TAG, "Battery level display: %s",
+        (level == MoaBattLevel::BATT_LOW) ? "LOW" :
+        (level == MoaBattLevel::BATT_MEDIUM) ? "MEDIUM" : "HIGH");
     // Stop any blinking on battery LEDs
     _blinkMask &= ~((1 << LED_INDEX_BATT_LOW) | (1 << LED_INDEX_BATT_MED) | (1 << LED_INDEX_BATT_HI));
     
@@ -263,6 +270,7 @@ void MoaLedControl::setBlinkPeriod(uint8_t ledIndex, uint32_t periodMs) {
 }
 
 void MoaLedControl::setConfigModeIndication(bool enabled, uint32_t periodMs) {
+    ESP_LOGD(TAG, "Config mode indication: %s", enabled ? "ON" : "OFF");
     _configModeActive = enabled;
     
     if (enabled) {

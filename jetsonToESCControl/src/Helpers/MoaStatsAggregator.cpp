@@ -6,6 +6,9 @@
  */
 
 #include "MoaStatsAggregator.h"
+#include "esp_log.h"
+
+static const char* TAG = "Stats";
 
 MoaStatsAggregator::MoaStatsAggregator()
     : _mutex(nullptr)
@@ -27,6 +30,7 @@ MoaStatsAggregator::~MoaStatsAggregator() {
 
 void MoaStatsAggregator::begin() {
     _mutex = xSemaphoreCreateMutex();
+    ESP_LOGD(TAG, "Stats aggregator initialized");
 }
 
 void MoaStatsAggregator::update(const StatsReading& reading) {

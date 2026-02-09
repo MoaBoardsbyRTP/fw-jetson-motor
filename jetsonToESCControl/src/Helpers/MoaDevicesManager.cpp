@@ -7,6 +7,9 @@
 
 #include "MoaDevicesManager.h"
 #include "Constants.h"
+#include "esp_log.h"
+
+static const char* TAG = "Devices";
 
 MoaDevicesManager::MoaDevicesManager(MoaLedControl& leds, ESCController& esc, MoaFlashLog& log)
     : _leds(leds)
@@ -24,14 +27,17 @@ void MoaDevicesManager::setThrottleLevel(uint8_t percent) {
     if (percent > 100) {
         percent = 100;
     }
+    ESP_LOGD(TAG, "Throttle set to %d%%", percent);
     _esc.setThrottle(percent);
 }
 
 void MoaDevicesManager::stopMotor() {
+    ESP_LOGI(TAG, "Motor stop");
     _esc.setThrottle(0);
 }
 
 void MoaDevicesManager::armESC() {
+    ESP_LOGI(TAG, "ESC arming");
     // ESC arming sequence - set to minimum throttle
     _esc.setThrottle(0);
 }
@@ -56,10 +62,12 @@ void MoaDevicesManager::clearWarnings() {
 }
 
 void MoaDevicesManager::enterConfigMode() {
+    ESP_LOGI(TAG, "Entering config mode");
     _leds.setConfigModeIndication(true, LED_CONFIG_BLINK_MS);
 }
 
 void MoaDevicesManager::exitConfigMode() {
+    ESP_LOGI(TAG, "Exiting config mode");
     _leds.setConfigModeIndication(false);
 }
 

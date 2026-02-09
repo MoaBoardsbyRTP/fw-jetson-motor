@@ -7,9 +7,14 @@
 
 #include "Tasks.h"
 #include "MoaMainUnit.h"
+#include "esp_log.h"
+
+static const char* TAG = "SensorTask";
 
 void SensorTask(void* pvParameters) {
     MoaMainUnit* unit = static_cast<MoaMainUnit*>(pvParameters);
+    
+    ESP_LOGI(TAG, "SensorTask started");
     
     for (;;) {
         // Update all sensor producers
