@@ -260,6 +260,12 @@ public:
      */
     uint8_t getInterruptPin() const;
 
+    /**
+     * @brief Set the event queue handle (must be called after queue creation)
+     * @param eventQueue FreeRTOS queue handle for control events
+     */
+    void setEventQueue(QueueHandle_t eventQueue);
+
 private:
     QueueHandle_t _eventQueue;         ///< Queue to push events to
     MoaMcpDevice& _mcpDevice;          ///< Reference to shared MCP device

@@ -221,6 +221,10 @@ void MoaTempControl::pushTempEvent(int commandType) {
     xQueueSend(_eventQueue, &cmd, 0);  // Don't block if queue is full
 }
 
+void MoaTempControl::setEventQueue(QueueHandle_t eventQueue) {
+    _eventQueue = eventQueue;
+}
+
 void MoaTempControl::setStatsQueue(QueueHandle_t statsQueue) {
     _statsQueue = statsQueue;
 }

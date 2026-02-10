@@ -296,6 +296,10 @@ void MoaCurrentControl::pushCurrentEvent(int commandType) {
     xQueueSend(_eventQueue, &cmd, 0);  // Don't block if queue is full
 }
 
+void MoaCurrentControl::setEventQueue(QueueHandle_t eventQueue) {
+    _eventQueue = eventQueue;
+}
+
 void MoaCurrentControl::setStatsQueue(QueueHandle_t statsQueue) {
     _statsQueue = statsQueue;
 }

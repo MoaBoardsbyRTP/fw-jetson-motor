@@ -287,6 +287,10 @@ uint8_t MoaButtonControl::commandIdToIndex(uint8_t commandId) const {
     return commandId - COMMAND_BUTTON_STOP;
 }
 
+void MoaButtonControl::setEventQueue(QueueHandle_t eventQueue) {
+    _eventQueue = eventQueue;
+}
+
 void MoaButtonControl::pushButtonEvent(uint8_t commandId, uint8_t eventType) {
     if (_eventQueue == nullptr) {
         return;

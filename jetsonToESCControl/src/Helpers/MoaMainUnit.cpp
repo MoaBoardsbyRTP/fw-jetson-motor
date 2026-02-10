@@ -59,6 +59,12 @@ void MoaMainUnit::begin() {
     // Initialize stats aggregator
     _statsAggregator.begin();
 
+    // Set event queue on all producers (queue was nullptr at construction time)
+    _tempControl.setEventQueue(_eventQueue);
+    _battControl.setEventQueue(_eventQueue);
+    _currentControl.setEventQueue(_eventQueue);
+    _buttonControl.setEventQueue(_eventQueue);
+
     // Set stats queue on sensor producers
     _tempControl.setStatsQueue(_statsQueue);
     _battControl.setStatsQueue(_statsQueue);

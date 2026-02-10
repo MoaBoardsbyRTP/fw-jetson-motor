@@ -196,6 +196,12 @@ public:
     uint8_t getNumSamples() const;
 
     /**
+     * @brief Set the event queue handle (must be called after queue creation)
+     * @param eventQueue FreeRTOS queue handle for control events
+     */
+    void setEventQueue(QueueHandle_t eventQueue);
+
+    /**
      * @brief Set the stats queue for telemetry
      * @param statsQueue FreeRTOS queue handle for stats readings
      */

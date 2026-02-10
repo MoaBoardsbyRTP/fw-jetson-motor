@@ -278,6 +278,10 @@ void MoaBattControl::pushBattEvent(int commandType) {
     xQueueSend(_eventQueue, &cmd, 0);  // Don't block if queue is full
 }
 
+void MoaBattControl::setEventQueue(QueueHandle_t eventQueue) {
+    _eventQueue = eventQueue;
+}
+
 void MoaBattControl::setStatsQueue(QueueHandle_t statsQueue) {
     _statsQueue = statsQueue;
 }
