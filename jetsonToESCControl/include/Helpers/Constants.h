@@ -32,29 +32,29 @@
 /**
  * @brief Battery voltage divider ratio
  * Vbatt = Vadc * BATT_DIVIDER_RATIO
- * Adjust based on actual resistor values (e.g., 100k/10k = 11.0)
+ * Adjust based on actual resistor values (e.g., 47K/5.1K = 9.215)
  */
-#define BATT_DIVIDER_RATIO      11.0f
+#define BATT_DIVIDER_RATIO      9.215f
 
 /**
  * @brief Battery high threshold (V)
  */
-#define BATT_THRESHOLD_HIGH     12.0f
+#define BATT_THRESHOLD_HIGH     23.0f
 
 /**
  * @brief Battery medium threshold (V)
  */
-#define BATT_THRESHOLD_MEDIUM   10.5f
+#define BATT_THRESHOLD_MEDIUM   22.0f
 
 /**
  * @brief Battery low threshold (V)
  */
-#define BATT_THRESHOLD_LOW      9.0f
+#define BATT_THRESHOLD_LOW      21.0f
 
 /**
  * @brief Battery hysteresis (V)
  */
-#define BATT_HYSTERESIS         0.3f
+#define BATT_HYSTERESIS         0.5f
 
 /**
  * @brief Battery averaging samples
