@@ -4,7 +4,7 @@
 
 FreeRTOS-based architecture using the State Pattern for managing ESC control, sensor monitoring, and user input. Designed for extensibility to support future BLE control and WiFi configuration.
 
-**Implementation Status:** Phase 1 complete - Core infrastructure fully implemented, all hardware abstraction classes complete. Phase 2 in progress - State machine logic needs implementation.
+**Implementation Status:** Phase 1 complete - Core infrastructure fully implemented, all hardware abstraction classes complete. Phase 2 in progress - State machine partially functional (InitState, IdleState, SurfingState handle button events and ESC control with ramping). Error states still need implementation.
 
 ---
 
@@ -38,8 +38,9 @@ FreeRTOS-based architecture using the State Pattern for managing ESC control, se
 │   (50ms)      │            │    (20ms)       │            │  (event-driven) │
 │               │            │                 │            │                 │
 │ TempControl   │            │ ButtonControl   │            │ StateMachine    │
-│ BattControl   │            │  (interrupt)    │            │ Manager         │
-│ CurrentControl│            │ LedControl      │            │                 │
+│  (non-block)  │            │  (interrupt)    │            │ Manager         │
+│ BattControl   │            │ LedControl      │            │                 │
+│ CurrentControl│            │ ESC Ramp Tick   │            │                 │
 └───────┬───────┘            └────────┬────────┘            └────────┬────────┘
                                       │
                              MCP23018 INTA ──► ESP32 GPIO2 (ISR)
@@ -88,9 +89,9 @@ FreeRTOS-based architecture using the State Pattern for managing ESC control, se
 
 | State | Description | Status |
 |-------|-------------|--------|
-| **InitState** | Boot sequence, hardware init | 🔧 Stub exists, needs implementation |
-| **IdleState** | Waiting for user input, ESC stopped | 🔧 Stub exists, needs implementation |
-| **SurfingState** | Normal operation, ESC active | 🔧 Stub exists, needs implementation |
+| **InitState** | Boot sequence, transitions to Idle on any non-STOP button | ✅ Functional |
+| **IdleState** | Waiting for user input, starts ESC ramp on throttle button | ✅ Functional |
+| **SurfingState** | Normal operation, ESC active with ramped throttle, STOP returns to Idle | ✅ Functional |
 | **OverHeatingState** | Temperature limit exceeded, ESC reduced/stopped | 🔧 Stub exists, needs implementation |
 | **OverCurrentState** | Current limit exceeded, ESC stopped | 🔧 Stub exists, needs implementation |
 | **BatteryLowState** | Battery critical, ESC stopped | 🔧 Stub exists, needs implementation |
@@ -122,9 +123,9 @@ struct ControlCommand {
 
 | Task | Priority | Period | Responsibility |
 |------|----------|--------|----------------|
-| **SensorTask** | High | 50ms | Call `update()` on MoaTempControl, MoaBattControl, MoaCurrentControl |
-| **IOTask** | Medium | 20ms | Process button interrupts (INTCAPA), check long-press, update MoaLedControl |
-| **ControlTask** | Medium | Event-driven | Process event queue, run StateMachine, update ESCController, call MoaFlashLog.update() |
+| **SensorTask** | High | 50ms | Call `update()` on MoaTempControl (non-blocking), MoaBattControl, MoaCurrentControl |
+| **IOTask** | Medium | 20ms | Process button interrupts, check long-press, tick ESC ramp, update MoaLedControl |
+| **ControlTask** | Medium | Event-driven | Process event queue, run StateMachine, call MoaFlashLog.update() |
 | **BLETask** | Medium | Event-driven | [Future] GATT server, BLE commands → events |
 | **WebTask** | Low | N/A | [Future] Config webserver (only in ConfigState) |
 
@@ -141,13 +142,14 @@ void SensorTask(void* param) {
     }
 }
 
-// IOTask (20ms period) - Interrupt-driven buttons
+// IOTask (20ms period) - Interrupt-driven buttons + ESC ramp
 void IOTask(void* param) {
     for (;;) {
         if (buttonControl.isInterruptPending()) {
-            buttonControl.processInterrupt();  // Read INTCAPA, debounce, push events
+            buttonControl.processInterrupt();  // Read INTCAP+GPIO, debounce, push events
         }
         buttonControl.checkLongPress();        // Polled long-press detection
+        devicesManager.updateESC();            // Tick ESC ramp stepper
         ledControl.update();                   // Drives LED blink timing
         vTaskDelay(pdMS_TO_TICKS(20));
     }
@@ -171,7 +173,7 @@ void ControlTask(void* param) {
 
 - **Event Queue:** Single FreeRTOS queue for all `ControlCommand` events → ControlTask
 - **MCP23018 Mutex:** `MoaMcpDevice` class provides mutex-protected I2C access for MoaButtonControl and MoaLedControl
-- **MCP23018 INTA Interrupt:** Hardware interrupt on ESP32 GPIO2 sets volatile flag; IOTask processes via I2C
+- **MCP23018 INTA Interrupt:** Hardware interrupt on ESP32 GPIO2 sets volatile flag; IOTask processes via I2C. INTA pin also polled for stuck-LOW recovery (missed FALLING edges)
 - **MCP23018 Hardware Reset:** Dedicated reset line (GPIO10) for initialization and I2C error recovery
 - **I2C Mutex:** [If needed] Additional mutex if other I2C devices share the bus
 - **Config Mutex:** [Future] Protect shared config struct for web access
@@ -185,11 +187,11 @@ void ControlTask(void* param) {
 #### Hardware Abstraction Layer - COMPLETE ✅
 - [x] `ControlCommand` struct - Unified event structure
 - [x] `MoaTimer` - FreeRTOS xTimer wrapper with queue events
-- [x] `MoaTempControl` - DS18B20 with averaging, hysteresis, queue events, stats
+- [x] `MoaTempControl` - DS18B20 with non-blocking async conversion, averaging, hysteresis, queue events, stats
 - [x] `MoaBattControl` - ADC with averaging, 3-level thresholds, queue events, stats
 - [x] `MoaCurrentControl` - Hall effect sensor, bidirectional, queue events, stats
 - [x] `MoaMcpDevice` - Thread-safe MCP23018 wrapper with mutex, hardware reset, I2C error recovery
-- [x] `MoaButtonControl` - Interrupt-driven via INTCAPA, debounce window, long-press detection, queue events
+- [x] `MoaButtonControl` - Interrupt-driven via INTCAP+GPIO read (full interrupt clearing), per-button debounce, long-press detection, INTA pin polling for stuck-LOW recovery, queue events
 - [x] `MoaLedControl` - Individual control, blink patterns, config mode indication
 - [x] `MoaFlashLog` - LittleFS circular buffer, 128 entries, JSON export, critical flush
 - [x] `MoaStatsAggregator` - Thread-safe stats storage with mutex
@@ -209,24 +211,32 @@ void ControlTask(void* param) {
 - [x] `MoaState` - Abstract base class
 - [x] All state classes: `InitState`, `IdleState`, `SurfingState`, `OverHeatingState`, `OverCurrentState`, `BatteryLowState`
 
+#### ESC Integration - COMPLETE ✅
+- [x] `ESCController` - PWM output with ramped throttle transitions, `getCurrentThrottle()` accessor
+- [x] `MoaDevicesManager::setThrottleLevel()` - Converts percentage to duty cycle and initiates ramp
+- [x] `MoaDevicesManager::updateESC()` - Ticks ramp stepper, called from IOTask every 20ms
+- [x] `MoaDevicesManager::stopMotor()` - Immediate stop (cancels ramp)
+- [x] Ramp rate configurable via `ESC_RAMP_RATE` (default 100%/s)
+
 #### Pin Mapping & Constants - COMPLETE ✅
 - [x] `PinMapping.h` - All GPIO and MCP23018 pin definitions
 - [x] `Constants.h` - Hardware constants and default configuration values
 
 ### Phase 2: State Machine Logic - IN PROGRESS 🔧
 
-#### State Behavior Implementation - NOT STARTED ⏳
-- [ ] **InitState**: Boot sequence, transition to IdleState after init
-- [ ] **IdleState**: Handle button presses, transition to SurfingState on throttle button
-- [ ] **SurfingState**: ESC throttle control based on button input, handle safety events
+#### State Behavior Implementation - PARTIALLY COMPLETE
+- [x] **InitState**: Transitions to IdleState on any non-STOP button press
+- [x] **IdleState**: Handles button presses, starts ESC ramp and transitions to SurfingState on throttle button, STOP stays in Idle
+- [x] **SurfingState**: ESC throttle control via ramped transitions on button input, STOP returns to Idle
 - [ ] **OverHeatingState**: Reduce or stop ESC, transition back when cooled
 - [ ] **OverCurrentState**: Stop ESC, require manual reset
 - [ ] **BatteryLowState**: Stop ESC, indicate low battery
 
-#### ESC Integration - NOT STARTED ⏳
-- [ ] Wire ESCController to SurfingState for throttle control
-- [ ] Implement ramp control for smooth throttle transitions
-- [ ] Implement emergency stop in error states
+#### ESC Integration - COMPLETE ✅
+- [x] Wire ESCController to state machine via MoaDevicesManager
+- [x] Ramped throttle transitions (percentage → duty cycle, configurable rate)
+- [x] Emergency stop in stopMotor() (cancels ramp, immediate zero)
+- [x] Ramp ticked from IOTask every 20ms
 
 ### Phase 3: Refinement - PENDING ⏳
 
@@ -365,7 +375,8 @@ jetsonToESCControl/
 - Long-press STOP button (configurable, default 5s) enters config mode
 - Button interrupts reduce I2C bus load: I2C reads only on button press/release, not every 20ms
 - MCP23018 INTA is active-low, open-drain; ESP32 GPIO2 configured with INPUT_PULLUP
-- INTCAPA register read clears the interrupt condition on the MCP23018
+- INTCAP register read alone may not fully clear the MCP23018 interrupt; reading GPIO afterwards ensures full clearing
+- `isInterruptPending()` also polls the INTA pin state to catch stuck-LOW conditions (missed FALLING edges)
 - Hardware reset pin (GPIO10) pulses LOW for 2μs, then 1ms stabilization delay
 
 ---
@@ -375,10 +386,10 @@ jetsonToESCControl/
 | Class | Sensor/Source | Key Features | Status |
 |-------|---------------|--------------|--------|
 | **MoaTimer** | FreeRTOS xTimer | One-shot/periodic, timer ID in commandType | ✅ Complete |
-| **MoaTempControl** | DS18B20 | Averaging, hysteresis, above/below threshold events, stats | ✅ Complete |
+| **MoaTempControl** | DS18B20 | Non-blocking async conversion, averaging, hysteresis, above/below threshold events, stats | ✅ Complete |
 | **MoaBattControl** | ADC + divider | Averaging, 3-level thresholds (HIGH/MED/LOW), stats | ✅ Complete |
 | **MoaCurrentControl** | ACS759-200B Hall | Bidirectional, averaging, overcurrent detection, stats | ✅ Complete |
-| **MoaButtonControl** | MCP23018 Port A | Interrupt-driven (INTA), debounce window, long-press, 5 buttons | ✅ Complete |
+| **MoaButtonControl** | MCP23018 Port A | Interrupt-driven (INTA), INTCAP+GPIO read for full clearing, per-button debounce, INTA polling for stuck-LOW, long-press, 5 buttons | ✅ Complete |
 | **MoaLedControl** | MCP23018 Port B | 5 LEDs, blink patterns, config mode indication | ✅ Complete |
 | **MoaFlashLog** | LittleFS | 128 entries, 1-min flush, JSON export, critical flush | ✅ Complete |
 | **MoaStatsAggregator** | Stats queue | Thread-safe storage, mutex-protected access | ✅ Complete |
@@ -390,7 +401,10 @@ jetsonToESCControl/
 ### ✅ Completed (Ready for Use)
 - All hardware abstraction classes fully implemented
 - All sensor producers with averaging, hysteresis, and event generation
-- Interrupt-driven button input via MCP23018 INTA with debounce window and long-press detection
+- Non-blocking DS18B20 temperature reading (async two-phase state machine)
+- Interrupt-driven button input via MCP23018 INTA with per-button debounce, long-press detection, and INTA pin polling for stuck-LOW recovery
+- MCP23018 pullup configuration fixed (`INPUT_PULLUP` properly enables pullups)
+- MCP23018 interrupt fully cleared by reading both INTCAP and GPIO registers
 - MCP23018 hardware reset line for initialization and I2C error recovery
 - Custom `Adafruit_MCP23X18` class with `readIntCapA()`/`readIntCapB()` for interrupt capture registers
 - LED output with blink patterns
@@ -398,12 +412,13 @@ jetsonToESCControl/
 - FreeRTOS task infrastructure
 - Event routing and state machine framework
 - Stats aggregation for telemetry
+- ESC PWM with percentage-to-duty-cycle conversion and ramped throttle transitions
+- ESC ramp ticked from IOTask (20ms), configurable rate via `ESC_RAMP_RATE`
 - Build system configured
 
-### 🔧 In Progress / Stubs Exist
-- State machine logic (all states have empty event handlers)
-- ESC control integration with state machine
-- State transitions between states
+### 🔧 In Progress / Partially Implemented
+- State machine logic: InitState, IdleState, SurfingState handle button events and ESC control
+- Error states (OverHeating, OverCurrent, BatteryLow) still have empty handlers
 
 ### ⏳ Not Started
 - ConfigState for WiFi configuration
@@ -413,4 +428,4 @@ jetsonToESCControl/
 
 ---
 
-*Last updated: 2026-02-06*
+*Last updated: 2026-02-11*

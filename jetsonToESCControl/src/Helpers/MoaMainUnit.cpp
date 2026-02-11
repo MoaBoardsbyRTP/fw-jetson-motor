@@ -131,6 +131,10 @@ MoaStatsAggregator& MoaMainUnit::getStatsAggregator() {
     return _statsAggregator;
 }
 
+MoaDevicesManager& MoaMainUnit::getDevicesManager() {
+    return _devicesManager;
+}
+
 void MoaMainUnit::initI2C() {
     Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
     ESP_LOGI(TAG, "I2C initialized (SDA=%d, SCL=%d)", PIN_I2C_SDA, PIN_I2C_SCL);

@@ -23,6 +23,8 @@ ESCController::ESCController(uint8_t pin, uint8_t channel, uint16_t frequency){
     _rampTime = 10;
     _rampStep = 1;
     _ramping = false;
+    _rampRate = ESC_RAMP_RATE;
+    _tickPeriodMs = TASK_IO_PERIOD_MS;
 }
 
 void ESCController::begin(){
@@ -32,13 +34,14 @@ void ESCController::begin(){
 }
 
 void ESCController::writeThrottle(){
+    ESP_LOGD(TAG, "ESC writeThrottle (throttle=%d)", _throttle);
     ledcWrite(_channel, _throttle);
 }
 
 void ESCController::stop(){
     ESP_LOGI(TAG, "ESC stop");
+    _ramping = false;
     setThrottle(_minThrottle);
-    writeThrottle();
 }
 
 void ESCController::updateThrottle(){
@@ -51,21 +54,21 @@ void ESCController::updateThrottle(){
         if(_currentThrottle >= _targetThrottle){
             _currentThrottle = _targetThrottle;
             _ramping = false;
-            ESP_LOGD(TAG, "Ramp up complete (throttle=%d)", _currentThrottle);
+            ESP_LOGI(TAG, "Ramp complete (throttle=%d)", _currentThrottle);
         }
     } else if(_rampStep < 0){
         _currentThrottle += _rampStep;
         if(_currentThrottle <= _targetThrottle){
             _currentThrottle = _targetThrottle;
             _ramping = false;
-            ESP_LOGD(TAG, "Ramp down complete (throttle=%d)", _currentThrottle);
+            ESP_LOGI(TAG, "Ramp complete (throttle=%d)", _currentThrottle);
         }
     } else {
         _currentThrottle = _targetThrottle;
         _ramping = false;
     }
 
-    setThrottle(_currentThrottle);
+    _throttle = _currentThrottle;
     writeThrottle();
 }
 
@@ -81,6 +84,34 @@ void ESCController::setThrottle(uint16_t throttle){
     } else {
         _throttle = throttle;
     }
+    _currentThrottle = _throttle;
+    writeThrottle();
+}
+
+uint16_t ESCController::getCurrentThrottle() const{
+    return _currentThrottle;
+}
+
+void ESCController::setThrottlePercent(uint8_t percent){
+    if (percent > 100) {
+        percent = 100;
+    }
+    uint16_t targetDuty = (uint16_t)((uint32_t)percent * _maxThrottle / 100);
+    float currentPercent = (float)_currentThrottle * 100.0f / _maxThrottle;
+    float deltaPercent = abs((float)percent - currentPercent);
+    uint16_t rampSteps = (uint16_t)(deltaPercent * 1000.0f / (_rampRate * _tickPeriodMs));
+    if (rampSteps < 1) rampSteps = 1;
+
+    ESP_LOGI(TAG, "Throttle ramp to %d%% (duty=%d, steps=%d)", percent, targetDuty, rampSteps);
+    setRampThrottle(rampSteps, targetDuty);
+}
+
+void ESCController::setRampRate(float ratePercentPerSec){
+    _rampRate = (ratePercentPerSec > 0) ? ratePercentPerSec : 1.0f;
+}
+
+void ESCController::setTickPeriod(uint16_t periodMs){
+    _tickPeriodMs = (periodMs > 0) ? periodMs : 1;
 }
 
 void ESCController::setRampThrottle(uint16_t rampTime, uint16_t targetThrottle){

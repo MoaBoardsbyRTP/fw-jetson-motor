@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Arduino.h"
+#include "Constants.h"
 
 class ESCController{
 public:
@@ -55,9 +56,33 @@ public:
     bool isRamping() const;
 
     /**
+     * @brief Set throttle by percentage with ramped transition
+     * @param percent Throttle percentage (0-100)
+     */
+    void setThrottlePercent(uint8_t percent);
+
+    /**
+     * @brief Set the ramp rate
+     * @param ratePercentPerSec Ramp rate in %/s
+     */
+    void setRampRate(float ratePercentPerSec);
+
+    /**
+     * @brief Set the tick period used for ramp step calculation
+     * @param periodMs Tick interval in milliseconds
+     */
+    void setTickPeriod(uint16_t periodMs);
+
+    /**
      * @brief Emergency stop - immediately sets throttle to minimum
      */
     void stop();
+
+    /**
+     * @brief Get the current throttle duty cycle value
+     * @return uint16_t Current throttle (0-1023)
+     */
+    uint16_t getCurrentThrottle() const;
 private:
     uint8_t _pin;
     uint8_t _channel;
@@ -71,4 +96,6 @@ private:
     uint16_t _rampTime;
     int16_t _rampStep;
     bool _ramping;
+    float _rampRate;        // %/s
+    uint16_t _tickPeriodMs; // ms per updateThrottle() call
 };

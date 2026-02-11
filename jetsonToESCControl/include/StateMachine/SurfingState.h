@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MoaStateMachine.h"
+#include "MoaButtonControl.h"
 
 class SurfingState : public MoaState{
     MoaStateMachine& _moaMachine;

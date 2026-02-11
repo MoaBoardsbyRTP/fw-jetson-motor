@@ -1,8 +1,8 @@
 # Moa ESC Controller - Development Plan
 
 **Project:** jetsonToESCControl  
-**Last Updated:** 2026-02-06  
-**Based on:** Complete codebase analysis
+**Last Updated:** 2026-02-11  
+**Based on:** Complete codebase analysis + recent implementation work
 
 ---
 
@@ -10,7 +10,7 @@
 
 The jetsonToESCControl project has a **fully implemented Phase 1** with all hardware abstraction classes, FreeRTOS infrastructure, and the state machine framework complete. The system is event-driven using `ControlCommand` structs via FreeRTOS queues, with thread-safe I2C access via mutex-protected `MoaMcpDevice`. Button inputs are **interrupt-driven** via MCP23018 INTA pin, with hardware reset support for I2C error recovery.
 
-**Current Blocker:** All 6 state classes exist but have empty event handler methods. The system cannot transition between states or control the ESC until state logic is implemented.
+**Current Blocker:** Error state classes (OverHeatingState, OverCurrentState, BatteryLowState) still have empty event handlers. Core flow (Init → Idle → Surfing) is functional with ESC ramping.
 
 ---
 
@@ -22,8 +22,11 @@ The jetsonToESCControl project has a **fully implemented Phase 1** with all hard
 | FreeRTOS Tasks (4 tasks) | ✅ Complete | Sensor, IO, Control, Stats tasks running |
 | Event System | ✅ Complete | ControlCommand + ControlEventType unified events |
 | State Machine Framework | ✅ Complete | All 6 state classes instantiated |
-| **State Logic** | 🔧 **Stubs** | **Critical: All event handlers are empty** |
-| ESC Integration | 🔧 Stub | Ramping exists but not connected to state machine |
+| **Core State Logic** | ✅ **Functional** | InitState, IdleState, SurfingState handle buttons + ESC |
+| **Error State Logic** | 🔧 **Stubs** | OverHeating, OverCurrent, BatteryLow handlers empty |
+| ESC Integration | ✅ Complete | Ramped throttle via MoaDevicesManager, ticked from IOTask |
+| DS18B20 Non-blocking | ✅ Complete | Async two-phase state machine, no longer blocks SensorTask |
+| Button Interrupt Fixes | ✅ Complete | Pullup fix, INTCAP+GPIO clearing, INTA polling |
 | Config/ BLE/ WiFi | ⏳ Not Started | Future phases |
 
 ---
@@ -35,12 +38,12 @@ The jetsonToESCControl project has a **fully implemented Phase 1** with all hard
 **All components fully implemented and tested:**
 
 #### Sensor Producers (All with stats support)
-- ✅ `MoaTempControl` - DS18B20, averaging, hysteresis, above/below events
+- ✅ `MoaTempControl` - DS18B20, **non-blocking async conversion**, averaging, hysteresis, above/below events
 - ✅ `MoaBattControl` - ADC, 3-level thresholds (HIGH/MED/LOW), hysteresis
 - ✅ `MoaCurrentControl` - ACS759-200B Hall sensor, bidirectional, overcurrent detection
 
 #### I/O Controllers
-- ✅ `MoaButtonControl` - 5 buttons via MCP23018, interrupt-driven (INTA/INTCAPA), debounce window, long-press (5s)
+- ✅ `MoaButtonControl` - 5 buttons via MCP23018, interrupt-driven (INTA), **INTCAP+GPIO read for full clearing**, per-button debounce, **INTA pin polling for stuck-LOW recovery**, long-press (5s)
 - ✅ `MoaLedControl` - 5 LEDs via MCP23018, blink patterns, config mode indication
 - ✅ `MoaMcpDevice` - Thread-safe I2C wrapper with FreeRTOS mutex, hardware reset (GPIO10), I2C error recovery
 - ✅ `Adafruit_MCP23X18` - Custom MCP23018 driver with `readIntCapA()`/`readIntCapB()` for interrupt capture registers
@@ -53,7 +56,7 @@ The jetsonToESCControl project has a **fully implemented Phase 1** with all hard
 
 #### Core Classes
 - ✅ `MoaMainUnit` - Central coordinator, creates queues/tasks, owns all hardware
-- ✅ `MoaDevicesManager` - Output facade for LEDs, ESC, logging
+- ✅ `MoaDevicesManager` - Output facade for LEDs, ESC (with ramped throttle), logging
 - ✅ `MoaStateMachineManager` - Event router with full event handling
 - ✅ `MoaStateMachine` - State machine with all 6 state instances
 - ✅ `MoaState` - Abstract base class for all states
@@ -62,41 +65,37 @@ The jetsonToESCControl project has a **fully implemented Phase 1** with all hard
 - ✅ `ControlCommand` + `ControlEventType` - Unified event system
 - ✅ `PinMapping.h` - Complete GPIO and MCP23018 definitions
 - ✅ `Constants.h` - All hardware constants and defaults
-- ✅ FreeRTOS tasks: `SensorTask` (50ms), `IOTask` (20ms, interrupt-driven buttons), `ControlTask`, `StatsTask`
+- ✅ FreeRTOS tasks: `SensorTask` (50ms, non-blocking temp), `IOTask` (20ms, interrupt buttons + ESC ramp tick), `ControlTask`, `StatsTask`
 - ✅ PlatformIO build system with all dependencies
 
 ---
 
 ### Phase 2: State Machine Logic 🔧 IN PROGRESS
 
-**Priority: HIGH - This is the current blocker for a working system**
+**Priority: HIGH - Core flow works, error states still need implementation**
 
-All state classes exist (`InitState`, `IdleState`, `SurfingState`, `OverHeatingState`, `OverCurrentState`, `BatteryLowState`) but all event handler methods are empty stubs.
+#### Core States - COMPLETE ✅
 
-#### Required Implementation:
+**2.1 InitState** ✅
+- [x] Transitions to `IdleState` on any non-STOP button press
 
-**2.1 InitState** ⏳
-- [ ] Implement `onEnter()` - Initialize ESC, set LEDs to boot pattern
-- [ ] Transition to `IdleState` after successful init
-- [ ] Handle init failures (transition to error state)
-
-**2.2 IdleState** ⏳
-- [ ] Implement `onEnter()` - Stop ESC, show idle LED pattern
-- [ ] Handle button presses:
-  - STOP: Stay in Idle
-  - 25%/50%/75%/100%: Transition to `SurfingState` with corresponding throttle
+**2.2 IdleState** ✅
+- [x] Handle button presses:
+  - STOP: Stay in Idle, stop motor
+  - 25%/50%/75%/100%: Set throttle via ramped transition, transition to `SurfingState`
 - [ ] Handle safety events (overheat, overcurrent, low battery): Transition to appropriate error state
 
-**2.3 SurfingState** ⏳ **CRITICAL**
-- [ ] Implement `onEnter()` - Start ESC at requested throttle level
-- [ ] Handle button presses:
-  - STOP: Transition to `IdleState`
-  - 25%/50%/75%/100%: Update throttle via ESCController
+**2.3 SurfingState** ✅
+- [x] Handle button presses:
+  - STOP: Stop motor, transition to `IdleState`
+  - 25%/50%/75%/100%: Update throttle via ramped transition
 - [ ] Handle `timerExpired`: For future auto-stop feature
 - [ ] Handle safety events:
   - `overcurrentDetected`: Transition to `OverCurrentState`
   - `temperatureCrossedLimit` (above): Transition to `OverHeatingState`
   - `batteryLevelCrossedLimit` (LOW): Transition to `BatteryLowState`
+
+#### Error States - NOT STARTED ⏳
 
 **2.4 OverHeatingState** ⏳
 - [ ] Implement `onEnter()` - Reduce or stop ESC, show overheat LED pattern
@@ -113,11 +112,12 @@ All state classes exist (`InitState`, `IdleState`, `SurfingState`, `OverHeatingS
 - [ ] Handle battery level changes (charging/power cycle): Transition to `IdleState`
 - [ ] Log critical event to flash immediately
 
-#### ESC Integration:
-- [ ] Connect `ESCController::setThrottle()` to `SurfingState::onEnter()` and button handlers
-- [ ] Use `ESCController::setRampThrottle()` for smooth transitions
-- [ ] Implement `ESCController::updateThrottle()` call in `IOTask` or new task for ramping
-- [ ] Implement `ESCController::stop()` in all error states and `IdleState`
+#### ESC Integration - COMPLETE ✅
+- [x] `MoaDevicesManager::setThrottleLevel()` converts percentage → duty cycle, initiates ramp via `setRampThrottle()`
+- [x] `MoaDevicesManager::updateESC()` ticks ramp stepper, called from IOTask every 20ms
+- [x] `MoaDevicesManager::stopMotor()` cancels ramp and sets throttle to zero immediately
+- [x] `ESCController::getCurrentThrottle()` accessor for ramp delta calculation
+- [x] Ramp rate configurable via `ESC_RAMP_RATE` (currently 100%/s)
 
 ---
 
@@ -160,36 +160,28 @@ All state classes exist (`InitState`, `IdleState`, `SurfingState`, `OverHeatingS
 
 ### Immediate Next Steps (This Week)
 
-1. **Implement SurfingState** (2-3 hours)
-   - Add throttle control via button inputs
-   - Connect to ESCController
-   - Handle safety event transitions
+1. ~~**Implement SurfingState**~~ ✅ Done
+2. ~~**Implement IdleState**~~ ✅ Done
+3. ~~**Implement InitState**~~ ✅ Done
+4. ~~**ESC Ramping Integration**~~ ✅ Done
 
-2. **Implement IdleState** (1 hour)
-   - Handle button presses to transition to SurfingState
-   - Stop ESC on enter
-
-3. **Implement InitState** (30 min)
-   - Basic boot sequence
-   - Transition to IdleState
-
-4. **Implement Error States** (1-2 hours)
+5. **Implement Error States** (1-2 hours)
    - OverCurrentState: Stop ESC, require reset
    - OverHeatingState: Stop ESC, auto-recovery
    - BatteryLowState: Stop ESC, indicate error
 
+6. **LED State Indicators** (1 hour)
+   - Show different LED patterns per state
+   - Blink patterns for error states
+
 ### Short Term (Next 2 Weeks)
 
-5. **ESC Ramping Integration** (1 hour)
-   - Call `updateThrottle()` periodically
-   - Smooth throttle transitions
-
-6. **Basic Testing** (2-3 hours)
+7. **Safety Event Testing** (2-3 hours)
    - Button → State → ESC verification
-   - Safety cutoff testing
+   - Safety cutoff testing (overcurrent, overheat, low battery)
    - LED indication verification
 
-7. **Serial Debug Output** (1 hour)
+8. **Serial Debug Output** (1 hour)
    - State transition logging
    - Sensor value streaming
 
@@ -255,7 +247,7 @@ enum ControlEventType {
 | Risk | Likelihood | Impact | Mitigation |
 |------|------------|--------|------------|
 | State transition bugs | Medium | High | Thorough testing, clear state diagram |
-| ESC ramping timing | Low | Medium | Test with actual ESC, adjust periods |
+| ESC ramping timing | Low | Medium | Implemented and tested, rate configurable via ESC_RAMP_RATE |
 | Sensor threshold tuning | High | Medium | Make thresholds configurable |
 | I2C mutex contention | Low | Low | Already implemented, monitor if issues arise |
 | I2C bus lockup | Low | High | Hardware reset line (GPIO10) + `MoaMcpDevice::recover()` for automatic recovery |
@@ -265,9 +257,10 @@ enum ControlEventType {
 ## Success Criteria
 
 ### Phase 2 Complete When:
-- [ ] Button press initiates ESC output in SurfingState
-- [ ] Different buttons set different throttle levels
-- [ ] STOP button stops ESC and returns to IdleState
+- [x] Button press initiates ESC output in SurfingState
+- [x] Different buttons set different throttle levels (25/50/75/100%)
+- [x] STOP button stops ESC and returns to IdleState
+- [x] Throttle transitions are ramped (configurable rate, currently 100%/s)
 - [ ] Overcurrent immediately stops ESC
 - [ ] Overheating stops ESC and allows recovery
 - [ ] Low battery stops ESC
@@ -324,4 +317,5 @@ enum ControlEventType {
 
 *Generated: 2026-02-05*  
 *Updated: 2026-02-06 - Interrupt-driven buttons, hardware reset, custom Adafruit_MCP23X18*  
-*Based on: Complete codebase analysis*
+*Updated: 2026-02-11 - Non-blocking DS18B20, button interrupt fixes (pullup + INTCAP clearing + INTA polling), PWM percentage fix, ESC ramping integration, core state machine functional*  
+*Based on: Complete codebase analysis + implementation*

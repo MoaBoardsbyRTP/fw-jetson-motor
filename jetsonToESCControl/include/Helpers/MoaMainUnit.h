@@ -167,6 +167,12 @@ public:
      */
     MoaStatsAggregator& getStatsAggregator();
 
+    /**
+     * @brief Get reference to devices manager
+     * @return MoaDevicesManager& Devices manager facade
+     */
+    MoaDevicesManager& getDevicesManager();
+
 private:
     // === FreeRTOS resources ===
     QueueHandle_t _eventQueue;

@@ -24,22 +24,22 @@ MoaDevicesManager::~MoaDevicesManager() {
 // === ESC Control ===
 
 void MoaDevicesManager::setThrottleLevel(uint8_t percent) {
-    if (percent > 100) {
-        percent = 100;
-    }
-    ESP_LOGD(TAG, "Throttle set to %d%%", percent);
-    _esc.setThrottle(percent);
+    _esc.setThrottlePercent(percent);
 }
 
 void MoaDevicesManager::stopMotor() {
     ESP_LOGI(TAG, "Motor stop");
-    _esc.setThrottle(0);
+    _esc.stop();
 }
 
 void MoaDevicesManager::armESC() {
     ESP_LOGI(TAG, "ESC arming");
-    // ESC arming sequence - set to minimum throttle
+    // ESC arming sequence - set to minimum throttle immediately (no ramp)
     _esc.setThrottle(0);
+}
+
+void MoaDevicesManager::updateESC() {
+    _esc.updateThrottle();
 }
 
 // === LED Indicators ===

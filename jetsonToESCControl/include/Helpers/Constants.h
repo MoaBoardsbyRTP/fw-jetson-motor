@@ -39,22 +39,22 @@
 /**
  * @brief Battery high threshold (V)
  */
-#define BATT_THRESHOLD_HIGH     23.0f
+#define BATT_THRESHOLD_HIGH     25.0f
 
 /**
  * @brief Battery medium threshold (V)
  */
-#define BATT_THRESHOLD_MEDIUM   22.0f
+#define BATT_THRESHOLD_MEDIUM   21.5f
 
 /**
  * @brief Battery low threshold (V)
  */
-#define BATT_THRESHOLD_LOW      21.0f
+#define BATT_THRESHOLD_LOW      20.0f
 
 /**
  * @brief Battery hysteresis (V)
  */
-#define BATT_HYSTERESIS         0.5f
+#define BATT_HYSTERESIS         0.1f
 
 /**
  * @brief Battery averaging samples
@@ -192,6 +192,34 @@
 #define ESC_PULSE_MAX_US        2000
 
 /**
+ * @brief ESC max throttle (duty cycle value for 10-bit resolution)
+ */
+#define ESC_MAX_THROTTLE        1023
+
+/**
  * @brief ESC ramp rate (% per second)
  */
-#define ESC_RAMP_RATE           25.0f
+#define ESC_RAMP_RATE           100.0f
+
+
+/**
+ * @brief Time it stays at 25% throttle before stopping (ms)
+ */
+#define ESC_25_TIME           240000
+
+/**
+ * @brief Time it stays at 50% throttle before stopping (ms)
+ */
+#define ESC_50_TIME           180000
+
+/**
+ * @brief Time it stays at 75% throttle before stopping (ms)
+ */
+#define ESC_75_TIME           90000
+
+/**
+ * @brief Time it stays at 100% throttle before stopping (ms)
+ */
+#define ESC_100_TIME          15000
+
+

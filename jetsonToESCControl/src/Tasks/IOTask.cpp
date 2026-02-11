@@ -33,6 +33,9 @@ void IOTask(void* pvParameters) {
         // This updates button hold times and fires long-press events
         unit->getButtonControl().checkLongPress();
         
+        // Tick ESC ramp (smooth throttle transitions)
+        unit->getDevicesManager().updateESC();
+        
         // Update LED output (drives blink timing)
         unit->getLedControl().update();
         

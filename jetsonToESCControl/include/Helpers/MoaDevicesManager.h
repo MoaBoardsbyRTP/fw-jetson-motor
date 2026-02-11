@@ -67,6 +67,11 @@ public:
      */
     void armESC();
 
+    /**
+     * @brief Tick the ESC ramp, call periodically from IOTask
+     */
+    void updateESC();
+
     // === LED Indicators ===
 
     /**
