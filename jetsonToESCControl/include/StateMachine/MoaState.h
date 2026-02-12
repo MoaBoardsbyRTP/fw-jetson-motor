@@ -9,6 +9,7 @@ protected:
 public:
     MoaState(MoaDevicesManager& devices) : _devices(devices) {}
     virtual ~MoaState(){}
+    virtual void onEnter() = 0;
     virtual void buttonClick(ControlCommand command) = 0;
     virtual void overcurrentDetected(ControlCommand command) = 0;
     virtual void temperatureCrossedLimit(ControlCommand command) = 0;

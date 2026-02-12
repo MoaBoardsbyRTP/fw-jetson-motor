@@ -7,6 +7,11 @@ static const char* TAG = "OverHeatState";
 OverHeatingState::OverHeatingState(MoaStateMachine& moaMachine, MoaDevicesManager& devices) : MoaState(devices), _moaMachine(moaMachine){
 }
 
+void OverHeatingState::onEnter() {
+    ESP_LOGI(TAG, "Entering OverHeating State");
+    _devices.stopMotor();
+}
+
 void OverHeatingState::buttonClick(ControlCommand command) {
     ESP_LOGD(TAG, "buttonClick (cmdType=%d, val=%d)", command.commandType, command.value);
 }

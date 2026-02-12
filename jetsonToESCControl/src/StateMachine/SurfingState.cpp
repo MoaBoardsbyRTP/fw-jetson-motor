@@ -7,10 +7,15 @@ static const char* TAG = "SurfingState";
 SurfingState::SurfingState(MoaStateMachine& moaMachine, MoaDevicesManager& devices) : MoaState(devices), _moaMachine(moaMachine){
 }
 
+void SurfingState::onEnter() {
+    ESP_LOGI(TAG, "Entering Surfing State");
+}
+
 void SurfingState::buttonClick(ControlCommand command) {
     ESP_LOGD(TAG, "buttonClick (cmdType=%d, val=%d)", command.commandType, command.value);
     if (command.commandType != COMMAND_BUTTON_STOP)
         _devices.setThrottleLevel((command.commandType - 1) * 25);
+        
      else{
         _devices.stopMotor();
         _moaMachine.setState(_moaMachine.getIdleState());

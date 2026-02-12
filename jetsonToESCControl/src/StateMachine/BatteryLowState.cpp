@@ -7,6 +7,11 @@ static const char* TAG = "BattLowState";
 BatteryLowState::BatteryLowState(MoaStateMachine& moaMachine, MoaDevicesManager& devices) : MoaState(devices), _moaMachine(moaMachine) {
 }
 
+void BatteryLowState::onEnter() {
+    ESP_LOGI(TAG, "Entering Battery Low State");
+    _devices.stopMotor();
+}
+
 void BatteryLowState::buttonClick(ControlCommand command) {
     ESP_LOGD(TAG, "buttonClick (cmdType=%d, val=%d)", command.commandType, command.value);
 }

@@ -7,6 +7,11 @@ static const char* TAG = "OverCurrState";
 OverCurrentState::OverCurrentState(MoaStateMachine& moaMachine, MoaDevicesManager& devices) : MoaState(devices), _moaMachine(moaMachine){
 }
 
+void OverCurrentState::onEnter() {
+    ESP_LOGI(TAG, "Entering OverCurrent State");
+    _devices.stopMotor();
+}
+
 void OverCurrentState::buttonClick(ControlCommand command) {
     ESP_LOGD(TAG, "buttonClick (cmdType=%d, val=%d)", command.commandType, command.value);
 }

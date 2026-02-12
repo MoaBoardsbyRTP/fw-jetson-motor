@@ -34,8 +34,7 @@ void MoaDevicesManager::stopMotor() {
 
 void MoaDevicesManager::armESC() {
     ESP_LOGI(TAG, "ESC arming");
-    // ESC arming sequence - set to minimum throttle immediately (no ramp)
-    _esc.setThrottle(0);
+    _esc.stop();
 }
 
 void MoaDevicesManager::updateESC() {

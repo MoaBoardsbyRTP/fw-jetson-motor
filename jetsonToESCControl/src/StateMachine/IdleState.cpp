@@ -8,6 +8,11 @@ static const char* TAG = "IdleState";
 IdleState::IdleState(MoaStateMachine& moaMachine, MoaDevicesManager& devices) : MoaState(devices), _moaMachine(moaMachine) {
 }
 
+void IdleState::onEnter() {
+    ESP_LOGI(TAG, "Entering Idle State");
+    _devices.stopMotor();
+}
+
 void IdleState::buttonClick(ControlCommand command) {
     ESP_LOGD(TAG, "buttonClick (cmdType=%d, val=%d)", command.commandType, command.value);
     if (command.commandType != COMMAND_BUTTON_STOP){

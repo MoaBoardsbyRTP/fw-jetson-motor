@@ -8,9 +8,13 @@ static const char* TAG = "InitState";
 InitState::InitState(MoaStateMachine& moaMachine, MoaDevicesManager& devices) : MoaState(devices), _moaMachine(moaMachine) {
 }
 
+void InitState::onEnter() {
+    ESP_LOGI(TAG, "Entering Init State");
+}
+
 void InitState::buttonClick(ControlCommand command) {
     ESP_LOGD(TAG, "buttonClick (cmdType=%d, val=%d)", command.commandType, command.value);
-    if (command.commandType != COMMAND_BUTTON_STOP){
+    if (command.commandType == COMMAND_BUTTON_STOP){
         ESP_LOGI(TAG, "Going to Idle State");
         _moaMachine.setState(_moaMachine.getIdleState());
     }

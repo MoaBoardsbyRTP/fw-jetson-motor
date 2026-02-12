@@ -50,6 +50,7 @@ void MoaStateMachine::setState(MoaState* state){
         (state == _overCurrentState) ? "OverCurrent" :
         (state == _batteryLowState) ? "BatteryLow" : "Unknown");
     _state = state;
+    _state->onEnter();
 }
 
 MoaState* MoaStateMachine::getInitState(){

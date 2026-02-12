@@ -6,6 +6,7 @@ class BatteryLowState : public MoaState{
     MoaStateMachine& _moaMachine;
 public:
     BatteryLowState(MoaStateMachine& moaMachine, MoaDevicesManager& devices);
+    void onEnter() override;
     void buttonClick(ControlCommand command) override;
     void overcurrentDetected(ControlCommand command) override;
     void temperatureCrossedLimit(ControlCommand command) override;
