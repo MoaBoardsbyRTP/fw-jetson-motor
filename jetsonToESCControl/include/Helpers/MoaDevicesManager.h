@@ -15,6 +15,7 @@
 #include "MoaLedControl.h"
 #include "ESCController.h"
 #include "MoaFlashLog.h"
+#include "MoaTimer.h"
 #include "MoaBattControl.h"  // For MoaBattLevel enum
 
 /**
@@ -71,6 +72,36 @@ public:
      * @brief Tick the ESC ramp, call periodically from IOTask
      */
     void updateESC();
+
+    // === Timer Management ===
+
+    /**
+     * @brief Set the event queue for timer events
+     * @param queue FreeRTOS queue handle (must be set before using timers)
+     */
+    void setEventQueue(QueueHandle_t queue);
+
+    /**
+     * @brief Start or restart a timer by ID
+     * @param timerId Timer identifier (e.g., TIMER_ID_THROTTLE)
+     * @param durationMs Duration in milliseconds
+     * @return true if timer started successfully
+     */
+    bool startTimer(uint8_t timerId, uint32_t durationMs);
+
+    /**
+     * @brief Stop a timer by ID
+     * @param timerId Timer identifier
+     * @return true if timer stopped successfully
+     */
+    bool stopTimer(uint8_t timerId);
+
+    /**
+     * @brief Check if a timer is currently running
+     * @param timerId Timer identifier
+     * @return true if timer is active
+     */
+    bool isTimerRunning(uint8_t timerId) const;
 
     // === LED Indicators ===
 
@@ -174,4 +205,6 @@ private:
     MoaLedControl& _leds;
     ESCController& _esc;
     MoaFlashLog& _log;
+    QueueHandle_t _eventQueue;
+    MoaTimer* _timers[MOA_TIMER_MAX_INSTANCES];
 };

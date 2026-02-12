@@ -64,6 +64,7 @@ void MoaMainUnit::begin() {
     _battControl.setEventQueue(_eventQueue);
     _currentControl.setEventQueue(_eventQueue);
     _buttonControl.setEventQueue(_eventQueue);
+    _devicesManager.setEventQueue(_eventQueue);
 
     // Set stats queue on sensor producers
     _tempControl.setStatsQueue(_statsQueue);

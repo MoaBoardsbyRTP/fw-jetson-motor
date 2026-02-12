@@ -15,10 +15,18 @@ MoaDevicesManager::MoaDevicesManager(MoaLedControl& leds, ESCController& esc, Mo
     : _leds(leds)
     , _esc(esc)
     , _log(log)
+    , _eventQueue(nullptr)
 {
+    memset(_timers, 0, sizeof(_timers));
 }
 
 MoaDevicesManager::~MoaDevicesManager() {
+    for (int i = 0; i < MOA_TIMER_MAX_INSTANCES; i++) {
+        if (_timers[i] != nullptr) {
+            delete _timers[i];
+            _timers[i] = nullptr;
+        }
+    }
 }
 
 // === ESC Control ===
@@ -39,6 +47,48 @@ void MoaDevicesManager::armESC() {
 
 void MoaDevicesManager::updateESC() {
     _esc.updateThrottle();
+}
+
+// === Timer Management ===
+
+void MoaDevicesManager::setEventQueue(QueueHandle_t queue) {
+    _eventQueue = queue;
+}
+
+bool MoaDevicesManager::startTimer(uint8_t timerId, uint32_t durationMs) {
+    if (timerId >= MOA_TIMER_MAX_INSTANCES) {
+        ESP_LOGW(TAG, "startTimer: invalid timerId=%d", timerId);
+        return false;
+    }
+    if (_eventQueue == nullptr) {
+        ESP_LOGW(TAG, "startTimer: event queue not set");
+        return false;
+    }
+
+    // Lazy-create the timer on first use
+    if (_timers[timerId] == nullptr) {
+        _timers[timerId] = new MoaTimer(_eventQueue, timerId);
+        ESP_LOGI(TAG, "Timer %d created", timerId);
+    }
+
+    return _timers[timerId]->start(durationMs);
+}
+
+bool MoaDevicesManager::stopTimer(uint8_t timerId) {
+    if (timerId >= MOA_TIMER_MAX_INSTANCES) {
+        return false;
+    }
+    if (_timers[timerId] == nullptr) {
+        return true;  // Not created = not running
+    }
+    return _timers[timerId]->stop();
+}
+
+bool MoaDevicesManager::isTimerRunning(uint8_t timerId) const {
+    if (timerId >= MOA_TIMER_MAX_INSTANCES || _timers[timerId] == nullptr) {
+        return false;
+    }
+    return _timers[timerId]->isRunning();
 }
 
 // === LED Indicators ===

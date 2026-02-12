@@ -201,6 +201,14 @@
  */
 #define ESC_RAMP_RATE           100.0f
 
+// =============================================================================
+// Timer IDs
+// =============================================================================
+
+/**
+ * @brief Timer ID for throttle timeout
+ */
+#define TIMER_ID_THROTTLE       0
 
 /**
  * @brief Time it stays at 25% throttle before stopping (ms)
