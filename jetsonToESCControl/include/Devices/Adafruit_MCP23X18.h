@@ -8,8 +8,7 @@
  * and only supports I2C (no SPI variant).
  */
 
-#ifndef __ADAFRUIT_MCP23X18_H__
-#define __ADAFRUIT_MCP23X18_H__
+#pragma once
 
 #include <Adafruit_MCP23XXX.h>
 
@@ -29,6 +28,18 @@ public:
   // I2C initialization (MCP23018 is I2C only, no SPI)
   bool begin_I2C(uint8_t i2c_addr = MCP23XXX_ADDR, TwoWire *wire = &Wire);
 
+  // Override: MCP23018 allows pullup independent of direction
+  void pinMode(uint8_t pin, uint8_t mode);
+
+  // Independent pullup control (works on both input and output pins)
+  void setPullup(uint8_t pin, bool enabled);
+
+  // Port A configuration
+  void configGPIOA(uint8_t dir, uint8_t pullup);
+
+  // Port B configuration
+  void configGPIOB(uint8_t dir, uint8_t pullup);
+
   // Port A access
   uint8_t readGPIOA();
   void writeGPIOA(uint8_t value);
@@ -41,8 +52,10 @@ public:
   uint16_t readGPIOAB();
   void writeGPIOAB(uint16_t value);
 
+  // Interrupt capture registers (captures GPIO state at interrupt time)
+  uint8_t readIntCapA();
+  uint8_t readIntCapB();
+
   // Enable hardware address pins (HAEN bit in IOCON)
   void enableAddrPins();
 };
-
-#endif
