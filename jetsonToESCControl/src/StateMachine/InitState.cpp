@@ -10,6 +10,7 @@ InitState::InitState(MoaStateMachine& moaMachine, MoaDevicesManager& devices) : 
 
 void InitState::onEnter() {
     ESP_LOGI(TAG, "Entering Init State");
+    _devices.waveAllLeds();
 }
 
 void InitState::buttonClick(ControlCommand command) {

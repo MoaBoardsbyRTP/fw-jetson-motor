@@ -282,6 +282,12 @@ public:
      */
     bool isConfigModeActive() const;
 
+
+    /**
+     * @brief Do a wave pattern on all LEDs
+     */
+    void waveAllLeds();
+
 private:
     MoaMcpDevice& _mcpDevice;          ///< Reference to shared MCP device
     uint8_t _ledState;                 ///< Current LED state bitmask

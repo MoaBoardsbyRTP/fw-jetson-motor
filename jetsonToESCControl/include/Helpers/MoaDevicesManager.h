@@ -112,6 +112,11 @@ public:
      */
     void allLedsOff();
 
+    /**
+     * @brief Do a wave pattern on all LEDs (welcome animation)
+     */
+    void waveAllLeds();
+
     // === Logging ===
 
     /**

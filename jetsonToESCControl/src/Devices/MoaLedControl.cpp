@@ -287,6 +287,24 @@ bool MoaLedControl::isConfigModeActive() const {
     return _configModeActive;
 }
 
+void MoaLedControl::waveAllLeds() {
+    clearAllLeds();
+    
+    // Wave in: turn on LEDs 0→1→2→3→4
+    for (uint8_t i = 0; i < MOA_LED_COUNT; i++) {
+        setLed(i, true);
+        vTaskDelay(100);
+    }
+    
+    vTaskDelay(200);
+    
+    // Wave out: turn off LEDs 4→3→2→1→0
+    for (int8_t i = MOA_LED_COUNT - 1; i >= 0; i--) {
+        setLed(i, false);
+        vTaskDelay(100);
+    }
+}
+
 void MoaLedControl::writeLedState() {
     _mcpDevice.writePortB(_ledState);
 }

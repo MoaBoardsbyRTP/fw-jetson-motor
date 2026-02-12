@@ -74,6 +74,10 @@ void MoaDevicesManager::allLedsOff() {
     _leds.clearAllLeds();
 }
 
+void MoaDevicesManager::waveAllLeds() {
+    _leds.waveAllLeds();
+}
+
 // === Logging ===
 
 void MoaDevicesManager::logSystem(uint8_t code) {
