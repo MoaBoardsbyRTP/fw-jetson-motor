@@ -29,26 +29,6 @@
 #define MOA_BATT_MAX_SAMPLES 32
 
 /**
- * @brief Control type identifier for battery events
- */
-#define CONTROL_TYPE_BATTERY 102
-
-/**
- * @brief Command type for battery level entered HIGH zone
- */
-#define COMMAND_BATT_LEVEL_HIGH 1
-
-/**
- * @brief Command type for battery level entered MEDIUM zone
- */
-#define COMMAND_BATT_LEVEL_MEDIUM 2
-
-/**
- * @brief Command type for battery level entered LOW zone
- */
-#define COMMAND_BATT_LEVEL_LOW 3
-
-/**
  * @brief Battery level state enumeration
  */
 enum class MoaBattLevel {

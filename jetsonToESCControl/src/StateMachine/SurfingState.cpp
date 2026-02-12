@@ -27,14 +27,33 @@ void SurfingState::buttonClick(ControlCommand command) {
 
 void SurfingState::overcurrentDetected(ControlCommand command) {
     ESP_LOGD(TAG, "overcurrentDetected (cmdType=%d, val=%d)", command.commandType, command.value);
+    switch(command.commandType){
+        case COMMAND_CURRENT_OVERCURRENT:
+            _devices.disengageThrottle();
+            _moaMachine.setState(_moaMachine.getOverCurrentState());
+            break;
+    }
 }
 
 void SurfingState::temperatureCrossedLimit(ControlCommand command) {
     ESP_LOGD(TAG, "temperatureCrossedLimit (cmdType=%d, val=%d)", command.commandType, command.value);
+    switch(command.commandType){
+        case COMMAND_TEMP_CROSSED_ABOVE:
+            ESP_LOGI(TAG, "Temperature high - going to Over Heating State");
+            _devices.disengageThrottle();
+            _moaMachine.setState(_moaMachine.getOverHeatingState());
+            break;
+    }
 }
 
 void SurfingState::batteryLevelCrossedLimit(ControlCommand command) {
     ESP_LOGD(TAG, "batteryLevelCrossedLimit (cmdType=%d, val=%d)", command.commandType, command.value);
+    switch(command.commandType){
+        case COMMAND_BATT_LEVEL_LOW:
+            ESP_LOGI(TAG, "Battery low - going to Battery Low State");
+            _moaMachine.setState(_moaMachine.getBatteryLowState());
+            break;
+    }
 }
 
 void SurfingState::timerExpired(ControlCommand command) {

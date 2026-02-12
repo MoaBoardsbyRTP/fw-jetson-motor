@@ -31,21 +31,6 @@
 #define MOA_TEMP_MAX_SAMPLES 32
 
 /**
- * @brief Control type identifier for temperature events
- */
-#define CONTROL_TYPE_TEMPERATURE 101
-
-/**
- * @brief Command type for temperature crossed above target
- */
-#define COMMAND_TEMP_CROSSED_ABOVE 1
-
-/**
- * @brief Command type for temperature crossed below threshold (target - hysteresis)
- */
-#define COMMAND_TEMP_CROSSED_BELOW 2
-
-/**
  * @brief Temperature state enumeration for hysteresis control
  */
 enum class MoaTempState {

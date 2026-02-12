@@ -18,11 +18,6 @@
 #include "ControlCommand.h"
 
 /**
- * @brief Control type identifier for timer events
- */
-#define CONTROL_TYPE_TIMER 100
-
-/**
  * @brief Maximum number of MoaTimer instances supported
  * @note Used for static callback routing
  */

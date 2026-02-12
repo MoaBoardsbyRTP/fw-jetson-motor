@@ -25,28 +25,6 @@
 #include "ControlCommand.h"
 
 /**
- * @brief Control type identifier for button events
- */
-#define CONTROL_TYPE_BUTTON 104
-
-/**
- * @brief Command types for each button (matches physical button function)
- */
-#define COMMAND_BUTTON_STOP     1
-#define COMMAND_BUTTON_25       2
-#define COMMAND_BUTTON_50       3
-#define COMMAND_BUTTON_75       4
-#define COMMAND_BUTTON_100      5
-
-/**
- * @brief Button event types (sent in value field)
- */
-#define BUTTON_EVENT_PRESS           1
-#define BUTTON_EVENT_LONG_PRESS      2
-#define BUTTON_EVENT_RELEASE         3
-#define BUTTON_EVENT_VERY_LONG_PRESS 4
-
-/**
  * @brief Button pin mapping on MCP23018 Port A
  */
 #define BUTTON_PIN_STOP     1   // GPA1

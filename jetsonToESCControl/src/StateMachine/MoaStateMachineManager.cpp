@@ -6,7 +6,6 @@
  */
 
 #include "MoaStateMachineManager.h"
-#include "MoaButtonControl.h"  // For COMMAND_BUTTON_* defines
 #include "esp_log.h"
 
 static const char* TAG = "SMManager";

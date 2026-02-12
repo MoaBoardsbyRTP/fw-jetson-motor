@@ -35,26 +35,6 @@
 #define MOA_CURRENT_MAX_SAMPLES 32
 
 /**
- * @brief Control type identifier for current events
- */
-#define CONTROL_TYPE_CURRENT 103
-
-/**
- * @brief Command type for overcurrent detected (above positive threshold)
- */
-#define COMMAND_CURRENT_OVERCURRENT 1
-
-/**
- * @brief Command type for current returned to normal range
- */
-#define COMMAND_CURRENT_NORMAL 2
-
-/**
- * @brief Command type for reverse overcurrent detected (below negative threshold)
- */
-#define COMMAND_CURRENT_REVERSE_OVERCURRENT 3
-
-/**
  * @brief Current state enumeration
  */
 enum class MoaCurrentState {

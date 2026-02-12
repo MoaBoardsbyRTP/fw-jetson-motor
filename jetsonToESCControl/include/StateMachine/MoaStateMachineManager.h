@@ -16,15 +16,6 @@
 #include "StateMachine/MoaStateMachine.h"
 
 /**
- * @brief Control type identifiers for event routing
- */
-#define CONTROL_TYPE_TIMER       100
-#define CONTROL_TYPE_TEMPERATURE 101
-#define CONTROL_TYPE_BATTERY     102
-#define CONTROL_TYPE_CURRENT     103
-#define CONTROL_TYPE_BUTTON      104
-
-/**
  * @brief Event router and state machine wrapper
  * 
  * Routes ControlCommand events to the appropriate state machine methods
