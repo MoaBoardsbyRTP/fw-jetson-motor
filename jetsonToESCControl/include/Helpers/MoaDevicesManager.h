@@ -17,6 +17,7 @@
 #include "MoaFlashLog.h"
 #include "MoaTimer.h"
 #include "MoaBattControl.h"  // For MoaBattLevel enum
+#include "Utils.h"  // For escThrottleLevel, escThrottleTimeout
 
 /**
  * @brief Output device facade
@@ -72,6 +73,22 @@ public:
      * @brief Tick the ESC ramp, call periodically from IOTask
      */
     void updateESC();
+
+    /**
+     * @brief Engage throttle: set level and start appropriate timer
+     * @param commandType Button command (COMMAND_BUTTON_25..COMMAND_BUTTON_100)
+     */
+    void engageThrottle(uint8_t commandType);
+
+    /**
+     * @brief Disengage throttle: stop all throttle timers and motor
+     */
+    void disengageThrottle();
+
+    /**
+     * @brief Handle full throttle step-down to 75%% with its own timer
+     */
+    void handleThrottleStepDown();
 
     // === Timer Management ===
 

@@ -49,6 +49,32 @@ void MoaDevicesManager::updateESC() {
     _esc.updateThrottle();
 }
 
+void MoaDevicesManager::engageThrottle(uint8_t commandType) {
+    stopTimer(TIMER_ID_THROTTLE);
+    stopTimer(TIMER_ID_FULL_THROTTLE);
+    setThrottleLevel(escThrottleLevel(commandType));
+
+    if (commandType == COMMAND_BUTTON_100) {
+        startTimer(TIMER_ID_FULL_THROTTLE, ESC_100_TIME);
+    } else {
+        uint32_t timeout = escThrottleTimeout(commandType);
+        if (timeout > 0) {
+            startTimer(TIMER_ID_THROTTLE, timeout);
+        }
+    }
+}
+
+void MoaDevicesManager::disengageThrottle() {
+    stopTimer(TIMER_ID_THROTTLE);
+    stopTimer(TIMER_ID_FULL_THROTTLE);
+    stopMotor();
+}
+
+void MoaDevicesManager::handleThrottleStepDown() {
+    setThrottleLevel(ESC_BREAKING_MODE);
+    startTimer(TIMER_ID_THROTTLE, ESC_75_TIME_100);
+}
+
 // === Timer Management ===
 
 void MoaDevicesManager::setEventQueue(QueueHandle_t queue) {

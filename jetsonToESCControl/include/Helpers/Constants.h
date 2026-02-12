@@ -199,7 +199,7 @@
 /**
  * @brief ESC ramp rate (% per second)
  */
-#define ESC_RAMP_RATE           100.0f
+#define ESC_RAMP_RATE           200.0f
 
 // =============================================================================
 // Timer IDs
@@ -209,6 +209,11 @@
  * @brief Timer ID for throttle timeout
  */
 #define TIMER_ID_THROTTLE       0
+
+/**
+ * @brief Timer ID for throttle timeout when coming from 100% throttle
+ */
+#define TIMER_ID_FULL_THROTTLE   1
 
 /**
  * @brief Time it stays at 25% throttle before stopping (ms)
@@ -230,4 +235,27 @@
  */
 #define ESC_100_TIME          15000
 
+/**
+ * @brief Time at 75% throttle after stepping down from 100% (ms)
+ */
+#define ESC_75_TIME_100       45000
 
+/**
+ * @brief Percentage for ECO_MODE
+ */
+#define ESC_ECO_MODE          25
+
+/**
+ * @brief Percentage for PADDLE_OUT_MODE
+ */
+#define ESC_PADDLE_MODE       50
+
+/**
+ * @brief Percentage for BREAKING_ZONE_MODE
+ */
+#define ESC_BREAKING_MODE  75
+
+/**
+ * @brief Percentage for FULL_THROTTLE_MODE
+ */
+#define ESC_FULL_THROTTLE_MODE        100
