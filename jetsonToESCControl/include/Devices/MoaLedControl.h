@@ -286,7 +286,7 @@ public:
     /**
      * @brief Do a wave pattern on all LEDs
      */
-    void waveAllLeds();
+    void waveAllLeds(bool fast);
 
 private:
     MoaMcpDevice& _mcpDevice;          ///< Reference to shared MCP device

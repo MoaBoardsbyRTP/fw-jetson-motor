@@ -129,16 +129,26 @@ public:
     void showBatteryLevel(MoaBattLevel level);
 
     /**
-     * @brief Indicate overheat condition
-     * @param active True to turn on overheat LED
+     * @brief Indicate overheat condition (blinks temp LED)
+     * @param active True to blink overheat LED, false to turn off
      */
     void indicateOverheat(bool active);
 
     /**
-     * @brief Indicate overcurrent condition
-     * @param active True to turn on overcurrent LED
+     * @brief Indicate overcurrent condition (blinks overcurrent LED)
+     * @param active True to blink overcurrent LED, false to restore locked/unlocked state
      */
     void indicateOvercurrent(bool active);
+
+    /**
+     * @brief Show board locked state (overcurrent LED solid ON)
+     */
+    void showBoardLocked();
+
+    /**
+     * @brief Show board unlocked state (overcurrent LED OFF)
+     */
+    void showBoardUnlocked();
 
     /**
      * @brief Clear all warning LEDs
@@ -163,7 +173,12 @@ public:
     /**
      * @brief Do a wave pattern on all LEDs (welcome animation)
      */
-    void waveAllLeds();
+    void waveAllLeds(bool fast=false);
+
+    /**
+     * @brief Re-apply cached LED indicator state (battery, temp, overcurrent)
+     */
+    void refreshLedIndicators();
 
     // === Logging ===
 
@@ -224,4 +239,9 @@ private:
     MoaFlashLog& _log;
     QueueHandle_t _eventQueue;
     MoaTimer* _timers[MOA_TIMER_MAX_INSTANCES];
+
+    MoaBattLevel _lastBattLevel;
+    bool _lastOverheat;
+    bool _lastOvercurrent;
+    bool _boardLocked;
 };

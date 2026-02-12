@@ -52,7 +52,8 @@ void MoaCurrentControl::begin() {
 }
 
 void MoaCurrentControl::update() {
-    _rawAdc = analogRead(_adcPin);
+    //_rawAdc = analogRead(_adcPin);
+    _rawAdc = 2048;
     _currentReading = adcToCurrent(_rawAdc);
     
     // Add sample to circular buffer and update average

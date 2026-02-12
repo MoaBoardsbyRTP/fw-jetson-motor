@@ -129,22 +129,15 @@ void MoaStateMachineManager::handleButtonEvent(ControlCommand& cmd) {
     ESP_LOGI(TAG, "Button event: cmdId=%d, eventType=%s",
         cmd.commandType,
         (cmd.value == BUTTON_EVENT_PRESS) ? "PRESS" :
-        (cmd.value == BUTTON_EVENT_LONG_PRESS) ? "LONG_PRESS" : "RELEASE");
+        (cmd.value == BUTTON_EVENT_LONG_PRESS) ? "LONG_PRESS" :
+        (cmd.value == BUTTON_EVENT_VERY_LONG_PRESS) ? "VERY_LONG_PRESS" : "RELEASE");
     // Log the event
-    // Convert button command to log code
     uint8_t logCode = cmd.commandType;  // COMMAND_BUTTON_STOP=1, etc.
     if (cmd.value == BUTTON_EVENT_LONG_PRESS) {
-        logCode = LOG_BTN_STOP_LONG;  // Special code for long press
+        logCode = LOG_BTN_STOP_LONG;
     }
     _devices.logButton(logCode);
     
-    // Check for config mode entry (STOP button long press)
-    if (cmd.commandType == COMMAND_BUTTON_STOP && cmd.value == BUTTON_EVENT_LONG_PRESS) {
-        _devices.enterConfigMode();
-        _devices.logSystem(LOG_SYS_CONFIG_ENTER);
-        // TODO: Start webserver config mode
-    }
-    
-    // Route to state machine
+    // Route to state machine (states decide what long/very-long press means)
     _stateMachine.buttonClick(cmd);
 }

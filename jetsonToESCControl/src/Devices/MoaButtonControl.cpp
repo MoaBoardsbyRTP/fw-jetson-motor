@@ -27,7 +27,9 @@ MoaButtonControl::MoaButtonControl(QueueHandle_t eventQueue, MoaMcpDevice& mcpDe
     , _interruptPending(false)
     , _debounceMs(MOA_BUTTON_DEFAULT_DEBOUNCE_MS)
     , _longPressMs(MOA_BUTTON_DEFAULT_LONG_PRESS_MS)
+    , _veryLongPressMs(MOA_BUTTON_DEFAULT_VERY_LONG_PRESS_MS)
     , _longPressEnabled(false)
+    , _veryLongPressEnabled(false)
     , _lastRawState(0xFF)      // All released (active LOW, so 1 = released)
     , _debouncedState(0x00)    // All not pressed
     , _debounceUntil(0)        // No debounce active
@@ -38,6 +40,7 @@ MoaButtonControl::MoaButtonControl(QueueHandle_t eventQueue, MoaMcpDevice& mcpDe
         _buttons[i].pressStartTime = 0;
         _buttons[i].isPressed = false;
         _buttons[i].longPressFired = false;
+        _buttons[i].veryLongPressFired = false;
     }
 }
 
@@ -117,6 +120,7 @@ void MoaButtonControl::processButtonFromInterrupt(uint8_t index, bool isPressed,
         // Button just pressed
         btn.pressStartTime = now;
         btn.longPressFired = false;
+        btn.veryLongPressFired = false;
         
         ESP_LOGI(TAG, "Button %d pressed (interrupt)", index);
         // Push press event
@@ -127,6 +131,12 @@ void MoaButtonControl::processButtonFromInterrupt(uint8_t index, bool isPressed,
     } else {
         // Button just released
         ESP_LOGI(TAG, "Button %d released (interrupt)", index);
+        
+        // Fire deferred long press on release if very long press didn't fire
+        if (_veryLongPressEnabled && btn.longPressFired && !btn.veryLongPressFired) {
+            ESP_LOGI(TAG, "Button %d deferred long press fired on release", index);
+            pushButtonEvent(pinToCommandId(index), BUTTON_EVENT_LONG_PRESS);
+        }
         
         // Update debounced state bitmask
         _debouncedState &= ~(1 << index);
@@ -161,8 +171,21 @@ void MoaButtonControl::checkLongPress() {
             // Button is held - check for long press
             if ((now - btn.pressStartTime) >= _longPressMs) {
                 btn.longPressFired = true;
-                ESP_LOGI(TAG, "Button %d long press detected", i);
-                pushButtonEvent(pinToCommandId(i), BUTTON_EVENT_LONG_PRESS);
+                if (_veryLongPressEnabled) {
+                    // Defer: don't fire yet, wait for release or very long press
+                    ESP_LOGD(TAG, "Button %d long press threshold reached (deferred)", i);
+                } else {
+                    ESP_LOGI(TAG, "Button %d long press detected", i);
+                    pushButtonEvent(pinToCommandId(i), BUTTON_EVENT_LONG_PRESS);
+                }
+            }
+        }
+        
+        if (_veryLongPressEnabled && btn.isPressed && btn.longPressFired && !btn.veryLongPressFired) {
+            if ((now - btn.pressStartTime) >= _veryLongPressMs) {
+                btn.veryLongPressFired = true;
+                ESP_LOGI(TAG, "Button %d very long press detected", i);
+                pushButtonEvent(pinToCommandId(i), BUTTON_EVENT_VERY_LONG_PRESS);
             }
         }
     }
@@ -202,13 +225,17 @@ void MoaButtonControl::processButton(uint8_t index, bool isPressed, uint32_t now
                 // Button just pressed
                 btn.pressStartTime = now;
                 btn.longPressFired = false;
+                btn.veryLongPressFired = false;
                 
                 // Push press event
                 pushButtonEvent(pinToCommandId(index), BUTTON_EVENT_PRESS);
             } else {
                 // Button just released
-                // Optionally push release event (currently not used)
-                // pushButtonEvent(pinToCommandId(index), BUTTON_EVENT_RELEASE);
+                // Fire deferred long press on release if very long press didn't fire
+                if (_veryLongPressEnabled && btn.longPressFired && !btn.veryLongPressFired) {
+                    ESP_LOGI(TAG, "Button %d deferred long press fired on release", index);
+                    pushButtonEvent(pinToCommandId(index), BUTTON_EVENT_LONG_PRESS);
+                }
             }
             
             // Update debounced state bitmask
@@ -222,7 +249,17 @@ void MoaButtonControl::processButton(uint8_t index, bool isPressed, uint32_t now
         // Button is held - check for long press
         if ((now - btn.pressStartTime) >= _longPressMs) {
             btn.longPressFired = true;
-            pushButtonEvent(pinToCommandId(index), BUTTON_EVENT_LONG_PRESS);
+            if (_veryLongPressEnabled) {
+                ESP_LOGD(TAG, "Button %d long press threshold reached (deferred)", index);
+            } else {
+                pushButtonEvent(pinToCommandId(index), BUTTON_EVENT_LONG_PRESS);
+            }
+        }
+    } else if (btn.isPressed && _veryLongPressEnabled && btn.longPressFired && !btn.veryLongPressFired) {
+        // Button is held longer - check for very long press
+        if ((now - btn.pressStartTime) >= _veryLongPressMs) {
+            btn.veryLongPressFired = true;
+            pushButtonEvent(pinToCommandId(index), BUTTON_EVENT_VERY_LONG_PRESS);
         }
     }
 }
@@ -249,6 +286,22 @@ void MoaButtonControl::enableLongPress(bool enable) {
 
 bool MoaButtonControl::isLongPressEnabled() const {
     return _longPressEnabled;
+}
+
+void MoaButtonControl::setVeryLongPressTime(uint32_t veryLongPressMs) {
+    _veryLongPressMs = veryLongPressMs;
+}
+
+uint32_t MoaButtonControl::getVeryLongPressTime() const {
+    return _veryLongPressMs;
+}
+
+void MoaButtonControl::enableVeryLongPress(bool enable) {
+    _veryLongPressEnabled = enable;
+}
+
+bool MoaButtonControl::isVeryLongPressEnabled() const {
+    return _veryLongPressEnabled;
 }
 
 bool MoaButtonControl::isButtonPressed(uint8_t buttonId) const {

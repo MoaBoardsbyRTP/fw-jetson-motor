@@ -140,6 +140,11 @@
 #define LED_BLINK_PERIOD_MS     500
 
 /**
+ * @brief Warning blink period (ms) - fast blink for overcurrent/temperature alerts
+ */
+#define LED_WARNING_BLINK_MS    250
+
+/**
  * @brief Config mode blink period (ms) - faster for visibility
  */
 #define LED_CONFIG_BLINK_MS     300

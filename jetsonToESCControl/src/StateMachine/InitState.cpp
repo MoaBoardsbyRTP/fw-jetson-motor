@@ -10,14 +10,24 @@ InitState::InitState(MoaStateMachine& moaMachine, MoaDevicesManager& devices) : 
 
 void InitState::onEnter() {
     ESP_LOGI(TAG, "Entering Init State");
-    _devices.waveAllLeds();
+    _devices.showBoardLocked();
+    _devices.waveAllLeds(false);
+    _devices.refreshLedIndicators();
 }
 
 void InitState::buttonClick(ControlCommand command) {
     ESP_LOGD(TAG, "buttonClick (cmdType=%d, val=%d)", command.commandType, command.value);
-    if (command.commandType == COMMAND_BUTTON_STOP){
-        ESP_LOGI(TAG, "Going to Idle State");
+    if (command.commandType == COMMAND_BUTTON_STOP && command.value == BUTTON_EVENT_LONG_PRESS) {
+        ESP_LOGI(TAG, "Unlocking board - going to Idle State");
+        _devices.showBoardUnlocked();
+        _devices.waveAllLeds(true);
+        _devices.refreshLedIndicators();
         _moaMachine.setState(_moaMachine.getIdleState());
+    } else if (command.commandType == COMMAND_BUTTON_STOP && command.value == BUTTON_EVENT_VERY_LONG_PRESS) {
+        ESP_LOGI(TAG, "Entering Config Mode");
+        _devices.enterConfigMode();
+        _devices.logSystem(LOG_SYS_CONFIG_ENTER);
+        // TODO: Start webserver config mode
     }
 }
 

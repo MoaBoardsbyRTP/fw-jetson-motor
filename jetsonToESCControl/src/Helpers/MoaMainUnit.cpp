@@ -201,8 +201,8 @@ void MoaMainUnit::applyConfiguration() {
 
     // Button configuration
     _buttonControl.setDebounceTime(BUTTON_DEBOUNCE_MS);
-    _buttonControl.setLongPressTime(BUTTON_LONG_PRESS_MS);
     _buttonControl.enableLongPress(true);
+    _buttonControl.enableVeryLongPress(true);
 
     // Flash log configuration
     _flashLog.setFlushInterval(LOG_FLUSH_INTERVAL_MS);

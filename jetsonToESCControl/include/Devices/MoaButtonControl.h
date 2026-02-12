@@ -41,9 +41,10 @@
 /**
  * @brief Button event types (sent in value field)
  */
-#define BUTTON_EVENT_PRESS      1
-#define BUTTON_EVENT_LONG_PRESS 2
-#define BUTTON_EVENT_RELEASE    3
+#define BUTTON_EVENT_PRESS           1
+#define BUTTON_EVENT_LONG_PRESS      2
+#define BUTTON_EVENT_RELEASE         3
+#define BUTTON_EVENT_VERY_LONG_PRESS 4
 
 /**
  * @brief Button pin mapping on MCP23018 Port A
@@ -72,7 +73,12 @@
 /**
  * @brief Default long-press time in milliseconds
  */
-#define MOA_BUTTON_DEFAULT_LONG_PRESS_MS 5000
+#define MOA_BUTTON_DEFAULT_LONG_PRESS_MS      1000
+
+/**
+ * @brief Default very-long-press time in milliseconds
+ */
+#define MOA_BUTTON_DEFAULT_VERY_LONG_PRESS_MS 10000
 
 /**
  * @brief Button input handler with debounce and long-press detection
@@ -232,6 +238,30 @@ public:
     bool isLongPressEnabled() const;
 
     /**
+     * @brief Set the very-long-press detection time
+     * @param veryLongPressMs Time in milliseconds to trigger very-long-press (default: 10000ms)
+     */
+    void setVeryLongPressTime(uint32_t veryLongPressMs);
+
+    /**
+     * @brief Get the current very-long-press time
+     * @return uint32_t Very-long-press time in milliseconds
+     */
+    uint32_t getVeryLongPressTime() const;
+
+    /**
+     * @brief Enable or disable very-long-press detection
+     * @param enable True to enable very-long-press events
+     */
+    void enableVeryLongPress(bool enable);
+
+    /**
+     * @brief Check if very-long-press detection is enabled
+     * @return true if very-long-press detection is enabled
+     */
+    bool isVeryLongPressEnabled() const;
+
+    /**
      * @brief Check if a specific button is currently pressed
      * 
      * @param buttonId Button command ID (COMMAND_BUTTON_STOP, etc.)
@@ -274,7 +304,9 @@ private:
     volatile bool _interruptPending;   ///< Flag set by ISR
     uint32_t _debounceMs;              ///< Debounce time
     uint32_t _longPressMs;             ///< Long-press threshold
+    uint32_t _veryLongPressMs;         ///< Very-long-press threshold
     bool _longPressEnabled;            ///< Long-press detection enabled
+    bool _veryLongPressEnabled;        ///< Very-long-press detection enabled
     
     uint8_t _lastRawState;             ///< Last raw reading from MCP
     uint8_t _debouncedState;           ///< Current debounced state
@@ -288,6 +320,7 @@ private:
         uint32_t pressStartTime;       ///< Time when button was pressed
         bool isPressed;                ///< Current debounced pressed state
         bool longPressFired;           ///< Long-press event already sent
+        bool veryLongPressFired;       ///< Very-long-press event already sent
     } _buttons[MOA_BUTTON_COUNT];
 
     /**

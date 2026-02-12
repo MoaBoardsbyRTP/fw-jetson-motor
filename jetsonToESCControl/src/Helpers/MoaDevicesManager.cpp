@@ -16,6 +16,10 @@ MoaDevicesManager::MoaDevicesManager(MoaLedControl& leds, ESCController& esc, Mo
     , _esc(esc)
     , _log(log)
     , _eventQueue(nullptr)
+    , _lastBattLevel(MoaBattLevel::BATT_HIGH)
+    , _lastOverheat(false)
+    , _lastOvercurrent(false)
+    , _boardLocked(true)
 {
     memset(_timers, 0, sizeof(_timers));
 }
@@ -120,15 +124,41 @@ bool MoaDevicesManager::isTimerRunning(uint8_t timerId) const {
 // === LED Indicators ===
 
 void MoaDevicesManager::showBatteryLevel(MoaBattLevel level) {
+    _lastBattLevel = level;
     _leds.setBatteryLevel(level);
 }
 
 void MoaDevicesManager::indicateOverheat(bool active) {
-    _leds.setTempLed(active);
+    _lastOverheat = active;
+    if (active) {
+        _leds.startBlink(LED_INDEX_TEMP, LED_WARNING_BLINK_MS);
+    } else {
+        _leds.stopBlink(LED_INDEX_TEMP, false);
+    }
 }
 
 void MoaDevicesManager::indicateOvercurrent(bool active) {
-    _leds.setOvercurrentLed(active);
+    _lastOvercurrent = active;
+    if (active) {
+        _leds.startBlink(LED_INDEX_OVERCURRENT, LED_WARNING_BLINK_MS);
+    } else {
+        // Restore locked/unlocked solid state
+        _leds.stopBlink(LED_INDEX_OVERCURRENT, _boardLocked);
+    }
+}
+
+void MoaDevicesManager::showBoardLocked() {
+    _boardLocked = true;
+    if (!_lastOvercurrent) {
+        _leds.setOvercurrentLed(true);
+    }
+}
+
+void MoaDevicesManager::showBoardUnlocked() {
+    _boardLocked = false;
+    if (!_lastOvercurrent) {
+        _leds.setOvercurrentLed(false);
+    }
 }
 
 void MoaDevicesManager::clearWarnings() {
@@ -150,8 +180,22 @@ void MoaDevicesManager::allLedsOff() {
     _leds.clearAllLeds();
 }
 
-void MoaDevicesManager::waveAllLeds() {
-    _leds.waveAllLeds();
+void MoaDevicesManager::waveAllLeds(bool fast) {
+    _leds.waveAllLeds(fast);
+}
+
+void MoaDevicesManager::refreshLedIndicators() {
+    _leds.setBatteryLevel(_lastBattLevel);
+    if (_lastOverheat) {
+        _leds.startBlink(LED_INDEX_TEMP, LED_WARNING_BLINK_MS);
+    } else {
+        _leds.stopBlink(LED_INDEX_TEMP, false);
+    }
+    if (_lastOvercurrent) {
+        _leds.startBlink(LED_INDEX_OVERCURRENT, LED_WARNING_BLINK_MS);
+    } else {
+        _leds.setOvercurrentLed(_boardLocked);
+    }
 }
 
 // === Logging ===

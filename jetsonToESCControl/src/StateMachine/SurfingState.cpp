@@ -14,6 +14,9 @@ void SurfingState::onEnter() {
 
 void SurfingState::buttonClick(ControlCommand command) {
     ESP_LOGD(TAG, "buttonClick (cmdType=%d, val=%d)", command.commandType, command.value);
+    if (command.value != BUTTON_EVENT_PRESS) {
+        return;
+    }
     if (command.commandType != COMMAND_BUTTON_STOP) {
         _devices.engageThrottle(command.commandType);
     } else {
