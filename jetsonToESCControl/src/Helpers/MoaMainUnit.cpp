@@ -26,7 +26,7 @@ MoaMainUnit::MoaMainUnit()
     , _ledControl(_mcpDevice)
     , _flashLog()
     , _escController(PIN_ESC_PWM, 0, ESC_PWM_FREQUENCY)
-    , _devicesManager(_ledControl, _escController, _flashLog)
+    , _devicesManager(_ledControl, _escController, _flashLog, _config)
     , _stateMachineManager(_devicesManager)
 {
 }
@@ -182,24 +182,13 @@ void MoaMainUnit::initHardware() {
 }
 
 void MoaMainUnit::applyConfiguration() {
-    // Battery configuration
-    _battControl.setDividerRatio(BATT_DIVIDER_RATIO);
-    _battControl.setHighThreshold(BATT_THRESHOLD_HIGH);
-    _battControl.setLowThreshold(BATT_THRESHOLD_LOW);
-    _battControl.setHysteresis(BATT_HYSTERESIS);
+    // Load settings from NVS (falls back to Constants.h defaults)
+    _config.begin();
 
-    // Current sensor configuration
-    _currentControl.setSensitivity(CURRENT_SENSOR_SENSITIVITY);
-    _currentControl.setZeroOffset(CURRENT_SENSOR_OFFSET);
-    _currentControl.setOvercurrentThreshold(CURRENT_THRESHOLD_OVERCURRENT);
-    _currentControl.setReverseOvercurrentThreshold(CURRENT_THRESHOLD_REVERSE);
-    _currentControl.setHysteresis(CURRENT_HYSTERESIS);
+    // Apply NVS-backed settings to sensor devices and ESC
+    _config.applyTo(_battControl, _currentControl, _tempControl, _escController);
 
-    // Temperature configuration
-    _tempControl.setTargetTemp(TEMP_THRESHOLD_TARGET);
-    _tempControl.setHysteresis(TEMP_HYSTERESIS);
-
-    // Button configuration
+    // Button configuration (not user-tunable, stays hardcoded)
     _buttonControl.setDebounceTime(BUTTON_DEBOUNCE_MS);
     _buttonControl.enableLongPress(true);
     _buttonControl.enableVeryLongPress(true);
@@ -208,10 +197,6 @@ void MoaMainUnit::applyConfiguration() {
     _flashLog.setFlushInterval(LOG_FLUSH_INTERVAL_MS);
 
     ESP_LOGI(TAG, "Configuration applied");
-    ESP_LOGD(TAG, "  Batt: divider=%.2f, low=%.2fV, high=%.2fV, hyst=%.2fV", BATT_DIVIDER_RATIO, BATT_THRESHOLD_LOW, BATT_THRESHOLD_HIGH, BATT_HYSTERESIS);
-    ESP_LOGD(TAG, "  Current: sens=%.4f, offset=%.2f, OC=%.1fA, rev=%.1fA, hyst=%.1fA", CURRENT_SENSOR_SENSITIVITY, CURRENT_SENSOR_OFFSET, CURRENT_THRESHOLD_OVERCURRENT, CURRENT_THRESHOLD_REVERSE, CURRENT_HYSTERESIS);
-    ESP_LOGD(TAG, "  Temp: target=%.1fC, hyst=%.1fC", TEMP_THRESHOLD_TARGET, TEMP_HYSTERESIS);
-    ESP_LOGD(TAG, "  Button: debounce=%dms, longPress=%dms", BUTTON_DEBOUNCE_MS, BUTTON_LONG_PRESS_MS);
 }
 
 void MoaMainUnit::createTasks() {

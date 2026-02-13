@@ -33,6 +33,7 @@
 #include "MoaDevicesManager.h"
 #include "MoaStateMachineManager.h"
 #include "MoaStatsAggregator.h"
+#include "ConfigManager.h"
 #include "StatsReading.h"
 
 /**
@@ -193,6 +194,7 @@ private:
     ESCController _escController;
 
     // === Managers ===
+    ConfigManager _config;
     MoaDevicesManager _devicesManager;
     MoaStateMachineManager _stateMachineManager;
     MoaStatsAggregator _statsAggregator;
@@ -208,7 +210,7 @@ private:
     void initHardware();
 
     /**
-     * @brief Apply configuration from Constants.h
+     * @brief Apply configuration from ConfigManager (NVS with Constants.h fallback)
      */
     void applyConfiguration();
 

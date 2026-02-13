@@ -17,7 +17,7 @@
 #include "MoaFlashLog.h"
 #include "MoaTimer.h"
 #include "MoaBattControl.h"  // For MoaBattLevel enum
-#include "Utils.h"  // For escThrottleLevel, escThrottleTimeout
+#include "ConfigManager.h"
 
 /**
  * @brief Output device facade
@@ -44,7 +44,7 @@ public:
      * @param esc Reference to ESC controller
      * @param log Reference to flash logger
      */
-    MoaDevicesManager(MoaLedControl& leds, ESCController& esc, MoaFlashLog& log);
+    MoaDevicesManager(MoaLedControl& leds, ESCController& esc, MoaFlashLog& log, ConfigManager& config);
 
     /**
      * @brief Destructor
@@ -237,6 +237,7 @@ private:
     MoaLedControl& _leds;
     ESCController& _esc;
     MoaFlashLog& _log;
+    ConfigManager& _config;
     QueueHandle_t _eventQueue;
     MoaTimer* _timers[MOA_TIMER_MAX_INSTANCES];
 

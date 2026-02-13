@@ -6,15 +6,15 @@
  */
 
 #include "MoaDevicesManager.h"
-#include "Constants.h"
 #include "esp_log.h"
 
 static const char* TAG = "Devices";
 
-MoaDevicesManager::MoaDevicesManager(MoaLedControl& leds, ESCController& esc, MoaFlashLog& log)
+MoaDevicesManager::MoaDevicesManager(MoaLedControl& leds, ESCController& esc, MoaFlashLog& log, ConfigManager& config)
     : _leds(leds)
     , _esc(esc)
     , _log(log)
+    , _config(config)
     , _eventQueue(nullptr)
     , _lastBattLevel(MoaBattLevel::BATT_HIGH)
     , _lastOverheat(false)
@@ -56,12 +56,12 @@ void MoaDevicesManager::updateESC() {
 void MoaDevicesManager::engageThrottle(uint8_t commandType) {
     stopTimer(TIMER_ID_THROTTLE);
     stopTimer(TIMER_ID_FULL_THROTTLE);
-    setThrottleLevel(escThrottleLevel(commandType));
+    setThrottleLevel(_config.throttleLevel(commandType));
 
     if (commandType == COMMAND_BUTTON_100) {
-        startTimer(TIMER_ID_FULL_THROTTLE, ESC_100_TIME);
+        startTimer(TIMER_ID_FULL_THROTTLE, _config.escTime100);
     } else {
-        uint32_t timeout = escThrottleTimeout(commandType);
+        uint32_t timeout = _config.throttleTimeout(commandType);
         if (timeout > 0) {
             startTimer(TIMER_ID_THROTTLE, timeout);
         }
@@ -75,8 +75,8 @@ void MoaDevicesManager::disengageThrottle() {
 }
 
 void MoaDevicesManager::handleThrottleStepDown() {
-    setThrottleLevel(ESC_BREAKING_MODE);
-    startTimer(TIMER_ID_THROTTLE, ESC_75_TIME_100);
+    setThrottleLevel(_config.escBreakingMode);
+    startTimer(TIMER_ID_THROTTLE, _config.escTime75From100);
 }
 
 // === Timer Management ===
