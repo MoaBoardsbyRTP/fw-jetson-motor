@@ -39,22 +39,22 @@
 /**
  * @brief Battery high threshold (V)
  */
-#define BATT_THRESHOLD_HIGH     25.0f
+#define BATT_THRESHOLD_HIGH     21.5f
 
 /**
  * @brief Battery medium threshold (V)
  */
-#define BATT_THRESHOLD_MEDIUM   21.5f
+#define BATT_THRESHOLD_MEDIUM   20.0f
 
 /**
  * @brief Battery low threshold (V)
  */
-#define BATT_THRESHOLD_LOW      20.0f
+#define BATT_THRESHOLD_LOW      19.5f
 
 /**
  * @brief Battery hysteresis (V)
  */
-#define BATT_HYSTERESIS         0.1f
+#define BATT_HYSTERESIS         0.2f
 
 /**
  * @brief Battery averaging samples
@@ -104,12 +104,12 @@
 /**
  * @brief Temperature target threshold (°C)
  */
-#define TEMP_THRESHOLD_TARGET   60.0f
+#define TEMP_THRESHOLD_TARGET   78.0f
 
 /**
  * @brief Temperature hysteresis (°C)
  */
-#define TEMP_HYSTERESIS         2.0f
+#define TEMP_HYSTERESIS         13.0f
 
 /**
  * @brief Temperature averaging samples

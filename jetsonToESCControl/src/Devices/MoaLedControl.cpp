@@ -145,13 +145,13 @@ void MoaLedControl::setBatteryLevel(MoaBattLevel level) {
             break;
             
         case MoaBattLevel::BATT_MEDIUM:
-            // LOW and MED LEDs on
-            _ledState |= (1 << LED_INDEX_BATT_LOW) | (1 << LED_INDEX_BATT_MED);
+            // Only MED LED on
+            _ledState |= (1 << LED_INDEX_BATT_MED);
             break;
             
         case MoaBattLevel::BATT_HIGH:
-            // All three battery LEDs on
-            _ledState |= (1 << LED_INDEX_BATT_LOW) | (1 << LED_INDEX_BATT_MED) | (1 << LED_INDEX_BATT_HI);
+            // Only HIGH LED on
+            _ledState |= (1 << LED_INDEX_BATT_HI);
             break;
     }
     
