@@ -15,11 +15,13 @@ ESCController::ESCController(uint8_t pin, uint8_t channel, uint16_t frequency){
     _channel = channel;
     _frequency = frequency;
     _resolution = 10;
-    _minThrottle = 0;
-    _maxThrottle = 1023;
-    _currentThrottle = 0;
-    _targetThrottle = 0;
-    _throttle = 0;
+    uint32_t periodUs = 1000000UL / _frequency;  // 20000µs at 50Hz
+    uint16_t maxDuty = (1 << _resolution) - 1;    // 1023 for 10-bit
+    _minThrottle = (uint16_t)((uint32_t)ESC_PULSE_MIN_US * maxDuty / periodUs);  // ~51 for 1ms
+    _maxThrottle = (uint16_t)((uint32_t)ESC_PULSE_MAX_US * maxDuty / periodUs);  // ~102 for 2ms
+    _currentThrottle = _minThrottle;
+    _targetThrottle = _minThrottle;
+    _throttle = _minThrottle;
     _rampTime = 10;
     _rampStep = 1;
     _ramping = false;
@@ -31,10 +33,11 @@ void ESCController::begin(){
     ledcSetup(_channel, _frequency, _resolution);
     ledcAttachPin(_pin, _channel);
     ESP_LOGI(TAG, "ESC begin (pin=%d, ch=%d, freq=%d, res=%d)", _pin, _channel, _frequency, _resolution);
+    stop();
 }
 
 void ESCController::writeThrottle(){
-    ESP_LOGD(TAG, "ESC writeThrottle (throttle=%d)", _throttle);
+    ESP_LOGD(TAG, "ESC writeThrottle (duty=%d, min=%d, max=%d)", _throttle, _minThrottle, _maxThrottle);
     ledcWrite(_channel, _throttle);
 }
 
@@ -96,13 +99,14 @@ void ESCController::setThrottlePercent(uint8_t percent){
     if (percent > 100) {
         percent = 100;
     }
-    uint16_t targetDuty = (uint16_t)((uint32_t)percent * _maxThrottle / 100);
-    float currentPercent = (float)_currentThrottle * 100.0f / _maxThrottle;
+    uint16_t range = _maxThrottle - _minThrottle;
+    uint16_t targetDuty = _minThrottle + (uint16_t)((uint32_t)percent * range / 100);
+    float currentPercent = (float)(_currentThrottle - _minThrottle) * 100.0f / range;
     float deltaPercent = abs((float)percent - currentPercent);
     uint16_t rampSteps = (uint16_t)(deltaPercent * 1000.0f / (_rampRate * _tickPeriodMs));
     if (rampSteps < 1) rampSteps = 1;
 
-    ESP_LOGI(TAG, "Throttle ramp to %d%% (duty=%d, steps=%d)", percent, targetDuty, rampSteps);
+    ESP_LOGI(TAG, "Throttle ramp to %d%% (duty=%d, range=%d-%d, steps=%d)", percent, targetDuty, _minThrottle, _maxThrottle, rampSteps);
     setRampThrottle(rampSteps, targetDuty);
 }
 

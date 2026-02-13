@@ -32,7 +32,7 @@ public:
 
     /**
      * @brief Set the throttle value immediately (clamped to min/max bounds)
-     * @param throttle Throttle value (0-1023 for 10-bit resolution)
+     * @param throttle Duty cycle value (servo range: ~51-102 for 1ms-2ms at 50Hz)
      */
     void setThrottle(uint16_t throttle);
 
@@ -80,7 +80,7 @@ public:
 
     /**
      * @brief Get the current throttle duty cycle value
-     * @return uint16_t Current throttle (0-1023)
+     * @return uint16_t Current throttle duty (servo range: ~51-102)
      */
     uint16_t getCurrentThrottle() const;
 private:
