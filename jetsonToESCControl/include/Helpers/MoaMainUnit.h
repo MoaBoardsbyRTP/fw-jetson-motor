@@ -34,6 +34,7 @@
 #include "MoaStateMachineManager.h"
 #include "MoaStatsAggregator.h"
 #include "ConfigManager.h"
+#include "UartCli.h"
 #include "StatsReading.h"
 
 /**
@@ -53,6 +54,7 @@
 #define TASK_STACK_IO       4096
 #define TASK_STACK_CONTROL  4096
 #define TASK_STACK_STATS    2048
+#define TASK_STACK_CLI      3072
 
 /**
  * @brief Task priorities (higher = more priority)
@@ -61,6 +63,7 @@
 #define TASK_PRIORITY_IO        2
 #define TASK_PRIORITY_CONTROL   2
 #define TASK_PRIORITY_STATS     1
+#define TASK_PRIORITY_CLI       1
 
 /**
  * @brief Central coordinator for Moa ESC Controller
@@ -174,6 +177,12 @@ public:
      */
     MoaDevicesManager& getDevicesManager();
 
+    /**
+     * @brief Get reference to UART CLI
+     * @return UartCli& UART command-line interface
+     */
+    UartCli& getUartCli();
+
 private:
     // === FreeRTOS resources ===
     QueueHandle_t _eventQueue;
@@ -182,6 +191,7 @@ private:
     TaskHandle_t _ioTaskHandle;
     TaskHandle_t _controlTaskHandle;
     TaskHandle_t _statsTaskHandle;
+    TaskHandle_t _cliTaskHandle;
 
     // === Hardware instances ===
     MoaMcpDevice _mcpDevice;
@@ -198,6 +208,7 @@ private:
     MoaDevicesManager _devicesManager;
     MoaStateMachineManager _stateMachineManager;
     MoaStatsAggregator _statsAggregator;
+    UartCli _uartCli;
 
     /**
      * @brief Initialize I2C bus

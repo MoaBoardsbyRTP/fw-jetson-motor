@@ -54,3 +54,12 @@ void ControlTask(void* pvParameters);
  * @param pvParameters Pointer to MoaMainUnit instance
  */
 void StatsTask(void* pvParameters);
+
+/**
+ * @brief CLI task
+ * 
+ * Polls Serial for UART CLI commands at low priority.
+ * 
+ * @param pvParameters Pointer to MoaMainUnit instance
+ */
+void CliTask(void* pvParameters);

@@ -18,6 +18,7 @@ MoaMainUnit::MoaMainUnit()
     , _ioTaskHandle(nullptr)
     , _controlTaskHandle(nullptr)
     , _statsTaskHandle(nullptr)
+    , _cliTaskHandle(nullptr)
     , _mcpDevice(MCP23018_I2C_ADDR)
     , _tempControl(_eventQueue, PIN_TEMP_SENSE)
     , _battControl(_eventQueue, PIN_BATT_LEVEL_SENSE)
@@ -28,6 +29,7 @@ MoaMainUnit::MoaMainUnit()
     , _escController(PIN_ESC_PWM, 0, ESC_PWM_FREQUENCY)
     , _devicesManager(_ledControl, _escController, _flashLog, _config)
     , _stateMachineManager(_devicesManager)
+    , _uartCli(_config, _battControl, _currentControl, _tempControl, _escController)
 {
 }
 
@@ -134,6 +136,10 @@ MoaStatsAggregator& MoaMainUnit::getStatsAggregator() {
 
 MoaDevicesManager& MoaMainUnit::getDevicesManager() {
     return _devicesManager;
+}
+
+UartCli& MoaMainUnit::getUartCli() {
+    return _uartCli;
 }
 
 void MoaMainUnit::initI2C() {
@@ -247,4 +253,16 @@ void MoaMainUnit::createTasks() {
         0
     );
     ESP_LOGI(TAG, "StatsTask created (stack=%d, prio=%d)", TASK_STACK_STATS, TASK_PRIORITY_STATS);
+
+    // Create CliTask
+    xTaskCreatePinnedToCore(
+        CliTask,
+        "CliTask",
+        TASK_STACK_CLI,
+        this,
+        TASK_PRIORITY_CLI,
+        &_cliTaskHandle,
+        0
+    );
+    ESP_LOGI(TAG, "CliTask created (stack=%d, prio=%d)", TASK_STACK_CLI, TASK_PRIORITY_CLI);
 }
