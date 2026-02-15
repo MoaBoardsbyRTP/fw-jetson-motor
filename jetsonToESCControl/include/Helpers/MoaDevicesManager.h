@@ -54,10 +54,10 @@ public:
     // === ESC Control ===
 
     /**
-     * @brief Set throttle level
-     * @param percent Throttle percentage (0-100)
+     * @brief Set throttle level by raw duty cycle
+     * @param duty 10-bit duty cycle value (clamped to servo range)
      */
-    void setThrottleLevel(uint8_t percent);
+    void setThrottleLevel(uint16_t duty);
 
     /**
      * @brief Stop the motor immediately

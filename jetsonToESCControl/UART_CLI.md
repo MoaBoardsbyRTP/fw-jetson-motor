@@ -34,15 +34,19 @@
 | `esc_t100` | Duration at 100% throttle | 15000 |
 | `esc_t75_100` | Duration at 75% after stepping down from 100% | 45000 |
 
-### Throttle Percentages
+### Throttle Duty Cycles (10-bit PWM, servo range ~51–102)
 
 | Key | Description | Default | Unit |
 |-----|-------------|---------|------|
-| `esc_eco` | Eco mode throttle | 25 | % |
-| `esc_paddle` | Paddle out mode throttle | 50 | % |
-| `esc_break` | Breaking zone mode throttle | 75 | % |
-| `esc_full` | Full throttle | 100 | % |
+| `esc_eco` | Eco mode duty cycle | 64 | duty (0-1023) |
+| `esc_paddle` | Paddle out mode duty cycle | 77 | duty (0-1023) |
+| `esc_break` | Breaking zone mode duty cycle | 89 | duty (0-1023) |
+| `esc_full` | Full throttle duty cycle | 102 | duty (0-1023) |
 | `esc_ramp` | Throttle ramp rate | 200.0 | %/s |
+
+> **Note:** At 50Hz / 10-bit resolution, the servo pulse range is ~51 (1ms) to ~102 (2ms).
+> These are the raw values written to the LEDC PWM register. Fine-tune them via CLI to
+> match your ESC's actual response curve.
 
 ### Battery Thresholds (Volts)
 

@@ -35,8 +35,8 @@ MoaDevicesManager::~MoaDevicesManager() {
 
 // === ESC Control ===
 
-void MoaDevicesManager::setThrottleLevel(uint8_t percent) {
-    _esc.setThrottlePercent(percent);
+void MoaDevicesManager::setThrottleLevel(uint16_t duty) {
+    _esc.setThrottleDuty(duty);
 }
 
 void MoaDevicesManager::stopMotor() {

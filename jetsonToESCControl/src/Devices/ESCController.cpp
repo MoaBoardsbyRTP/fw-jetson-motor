@@ -110,6 +110,21 @@ void ESCController::setThrottlePercent(uint8_t percent){
     setRampThrottle(rampSteps, targetDuty);
 }
 
+void ESCController::setThrottleDuty(uint16_t duty){
+    if (duty < _minThrottle) duty = _minThrottle;
+    if (duty > _maxThrottle) duty = _maxThrottle;
+
+    uint16_t range = _maxThrottle - _minThrottle;
+    float currentPercent = (float)(_currentThrottle - _minThrottle) * 100.0f / range;
+    float targetPercent  = (float)(duty - _minThrottle) * 100.0f / range;
+    float deltaPercent   = abs(targetPercent - currentPercent);
+    uint16_t rampSteps   = (uint16_t)(deltaPercent * 1000.0f / (_rampRate * _tickPeriodMs));
+    if (rampSteps < 1) rampSteps = 1;
+
+    ESP_LOGI(TAG, "Throttle ramp to duty=%d (range=%d-%d, steps=%d)", duty, _minThrottle, _maxThrottle, rampSteps);
+    setRampThrottle(rampSteps, duty);
+}
+
 void ESCController::setRampRate(float ratePercentPerSec){
     _rampRate = (ratePercentPerSec > 0) ? ratePercentPerSec : 1.0f;
 }

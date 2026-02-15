@@ -246,21 +246,21 @@
 #define ESC_75_TIME_100       45000
 
 /**
- * @brief Percentage for ECO_MODE
+ * @brief Duty cycle for ECO_MODE (10-bit, servo range ~51-102)
  */
-#define ESC_ECO_MODE          25
+#define ESC_ECO_MODE          64
 
 /**
- * @brief Percentage for PADDLE_OUT_MODE
+ * @brief Duty cycle for PADDLE_OUT_MODE (10-bit, servo range ~51-102)
  */
-#define ESC_PADDLE_MODE       50
+#define ESC_PADDLE_MODE       77
 
 /**
- * @brief Percentage for BREAKING_ZONE_MODE
+ * @brief Duty cycle for BREAKING_ZONE_MODE (10-bit, servo range ~51-102)
  */
-#define ESC_BREAKING_MODE  75
+#define ESC_BREAKING_MODE     89
 
 /**
- * @brief Percentage for FULL_THROTTLE_MODE
+ * @brief Duty cycle for FULL_THROTTLE_MODE (10-bit, servo range ~51-102)
  */
-#define ESC_FULL_THROTTLE_MODE        100
+#define ESC_FULL_THROTTLE_MODE        102

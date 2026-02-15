@@ -142,7 +142,7 @@ void UartCli::handleDump() {
     printSetting("esc_t100");
     printSetting("esc_t75_100");
 
-    Serial.println(F("--- Throttle Percentages ---"));
+    Serial.println(F("--- Throttle Duty Cycles (0-1023) ---"));
     printSetting("esc_eco");
     printSetting("esc_paddle");
     printSetting("esc_break");
@@ -178,7 +178,7 @@ void UartCli::handleHelp() {
     Serial.println();
     Serial.println(F("Keys:"));
     Serial.println(F("  esc_t25, esc_t50, esc_t75, esc_t100, esc_t75_100  (ms)"));
-    Serial.println(F("  esc_eco, esc_paddle, esc_break, esc_full           (%)"));
+    Serial.println(F("  esc_eco, esc_paddle, esc_break, esc_full           (duty 0-1023)"));
     Serial.println(F("  esc_ramp                                           (%/s)"));
     Serial.println(F("  batt_high, batt_med, batt_low, batt_hyst           (V)"));
     Serial.println(F("  temp_tgt, temp_hyst                                (C)"));
@@ -200,10 +200,10 @@ bool UartCli::printSetting(const char* key) {
     if (strcmp(key, "esc_t75_100") == 0)  { Serial.printf("  %-12s = %lu ms\n", key, _config.escTime75From100); return true; }
 
     // Throttle percentages
-    if (strcmp(key, "esc_eco") == 0)      { Serial.printf("  %-12s = %u %%\n", key, _config.escEcoMode); return true; }
-    if (strcmp(key, "esc_paddle") == 0)   { Serial.printf("  %-12s = %u %%\n", key, _config.escPaddleMode); return true; }
-    if (strcmp(key, "esc_break") == 0)    { Serial.printf("  %-12s = %u %%\n", key, _config.escBreakingMode); return true; }
-    if (strcmp(key, "esc_full") == 0)     { Serial.printf("  %-12s = %u %%\n", key, _config.escFullThrottle); return true; }
+    if (strcmp(key, "esc_eco") == 0)      { Serial.printf("  %-12s = %u duty\n", key, _config.escEcoMode); return true; }
+    if (strcmp(key, "esc_paddle") == 0)   { Serial.printf("  %-12s = %u duty\n", key, _config.escPaddleMode); return true; }
+    if (strcmp(key, "esc_break") == 0)    { Serial.printf("  %-12s = %u duty\n", key, _config.escBreakingMode); return true; }
+    if (strcmp(key, "esc_full") == 0)     { Serial.printf("  %-12s = %u duty\n", key, _config.escFullThrottle); return true; }
     if (strcmp(key, "esc_ramp") == 0)     { Serial.printf("  %-12s = %.1f %%/s\n", key, _config.escRampRate); return true; }
 
     // Battery
@@ -232,11 +232,11 @@ bool UartCli::setSetting(const char* key, const char* value) {
     if (strcmp(key, "esc_t100") == 0)     { _config.escTime100 = strtoul(value, nullptr, 10); return true; }
     if (strcmp(key, "esc_t75_100") == 0)  { _config.escTime75From100 = strtoul(value, nullptr, 10); return true; }
 
-    // Throttle percentages (uint8_t, clamped 0-100)
-    if (strcmp(key, "esc_eco") == 0)      { uint8_t v = (uint8_t)atoi(value); if (v > 100) v = 100; _config.escEcoMode = v; return true; }
-    if (strcmp(key, "esc_paddle") == 0)   { uint8_t v = (uint8_t)atoi(value); if (v > 100) v = 100; _config.escPaddleMode = v; return true; }
-    if (strcmp(key, "esc_break") == 0)    { uint8_t v = (uint8_t)atoi(value); if (v > 100) v = 100; _config.escBreakingMode = v; return true; }
-    if (strcmp(key, "esc_full") == 0)     { uint8_t v = (uint8_t)atoi(value); if (v > 100) v = 100; _config.escFullThrottle = v; return true; }
+    // Throttle duty cycles (uint16_t, clamped 0-1023)
+    if (strcmp(key, "esc_eco") == 0)      { uint16_t v = (uint16_t)atoi(value); if (v > 1023) v = 1023; _config.escEcoMode = v; return true; }
+    if (strcmp(key, "esc_paddle") == 0)   { uint16_t v = (uint16_t)atoi(value); if (v > 1023) v = 1023; _config.escPaddleMode = v; return true; }
+    if (strcmp(key, "esc_break") == 0)    { uint16_t v = (uint16_t)atoi(value); if (v > 1023) v = 1023; _config.escBreakingMode = v; return true; }
+    if (strcmp(key, "esc_full") == 0)     { uint16_t v = (uint16_t)atoi(value); if (v > 1023) v = 1023; _config.escFullThrottle = v; return true; }
     if (strcmp(key, "esc_ramp") == 0)     { _config.escRampRate = atof(value); return true; }
 
     // Battery (float)

@@ -72,11 +72,11 @@ public:
     uint32_t escTime100;
     uint32_t escTime75From100;
 
-    // === Throttle Percentages ===
-    uint8_t escEcoMode;
-    uint8_t escPaddleMode;
-    uint8_t escBreakingMode;
-    uint8_t escFullThrottle;
+    // === Throttle Duty Cycles (10-bit, 0-1023) ===
+    uint16_t escEcoMode;
+    uint16_t escPaddleMode;
+    uint16_t escBreakingMode;
+    uint16_t escFullThrottle;
     float escRampRate;
 
     // === Battery Thresholds (V) ===
@@ -97,11 +97,11 @@ public:
     // === Throttle helpers (use config values instead of Constants.h) ===
 
     /**
-     * @brief Map button command type to throttle percentage
+     * @brief Map button command type to throttle duty cycle
      * @param commandType COMMAND_BUTTON_25..COMMAND_BUTTON_100
-     * @return Throttle percentage, or 0 if unknown
+     * @return Duty cycle value (10-bit), or 0 if unknown
      */
-    uint8_t throttleLevel(uint8_t commandType) const;
+    uint16_t throttleLevel(uint8_t commandType) const;
 
     /**
      * @brief Map button command type to throttle timeout duration

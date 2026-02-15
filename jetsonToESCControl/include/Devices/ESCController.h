@@ -62,6 +62,12 @@ public:
     void setThrottlePercent(uint8_t percent);
 
     /**
+     * @brief Set throttle by raw duty cycle with ramped transition
+     * @param duty Raw 10-bit duty cycle value (clamped to min/max servo range)
+     */
+    void setThrottleDuty(uint16_t duty);
+
+    /**
      * @brief Set the ramp rate
      * @param ratePercentPerSec Ramp rate in %/s
      */
