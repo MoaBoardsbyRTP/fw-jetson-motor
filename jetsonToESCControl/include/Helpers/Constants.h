@@ -223,17 +223,17 @@
 /**
  * @brief Time it stays at 25% throttle before stopping (ms)
  */
-#define ESC_25_TIME           240000
+#define ESC_25_TIME           180000
 
 /**
  * @brief Time it stays at 50% throttle before stopping (ms)
  */
-#define ESC_50_TIME           180000
+#define ESC_50_TIME           120000
 
 /**
  * @brief Time it stays at 75% throttle before stopping (ms)
  */
-#define ESC_75_TIME           90000
+#define ESC_75_TIME           60000
 
 /**
  * @brief Time it stays at 100% throttle before stopping (ms)
@@ -243,7 +243,7 @@
 /**
  * @brief Time at 75% throttle after stepping down from 100% (ms)
  */
-#define ESC_75_TIME_100       45000
+#define ESC_75_TIME_100       30000
 
 /**
  * @brief Duty cycle for ECO_MODE (10-bit, servo range ~51-102)
