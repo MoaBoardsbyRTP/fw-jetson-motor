@@ -248,17 +248,17 @@
 /**
  * @brief Duty cycle for ECO_MODE (10-bit, servo range ~51-102)
  */
-#define ESC_ECO_MODE          64
+#define ESC_ECO_MODE          75
 
 /**
  * @brief Duty cycle for PADDLE_OUT_MODE (10-bit, servo range ~51-102)
  */
-#define ESC_PADDLE_MODE       77
+#define ESC_PADDLE_MODE       82
 
 /**
  * @brief Duty cycle for BREAKING_ZONE_MODE (10-bit, servo range ~51-102)
  */
-#define ESC_BREAKING_MODE     89
+#define ESC_BREAKING_MODE     87
 
 /**
  * @brief Duty cycle for FULL_THROTTLE_MODE (10-bit, servo range ~51-102)
