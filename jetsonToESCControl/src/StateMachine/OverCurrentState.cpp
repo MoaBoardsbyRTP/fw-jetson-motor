@@ -10,6 +10,8 @@ OverCurrentState::OverCurrentState(MoaStateMachine& moaMachine, MoaDevicesManage
 void OverCurrentState::onEnter() {
     ESP_LOGI(TAG, "Entering OverCurrent State");
     _devices.stopMotor();
+    _devices.indicateOvercurrent(true);
+    _devices.refreshLedIndicators();
 }
 
 void OverCurrentState::buttonClick(ControlCommand command) {

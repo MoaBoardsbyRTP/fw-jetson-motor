@@ -10,6 +10,8 @@ BatteryLowState::BatteryLowState(MoaStateMachine& moaMachine, MoaDevicesManager&
 void BatteryLowState::onEnter() {
     ESP_LOGI(TAG, "Entering Battery Low State");
     _devices.stopMotor();
+    _devices.showBatteryLevel(MoaBattLevel::BATT_LOW);
+    _devices.refreshLedIndicators();
 }
 
 void BatteryLowState::buttonClick(ControlCommand command) {

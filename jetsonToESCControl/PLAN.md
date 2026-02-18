@@ -1,7 +1,7 @@
 # Moa ESC Controller - Development Plan
 
 **Project:** jetsonToESCControl  
-**Last Updated:** 2026-02-12  
+**Last Updated:** 2026-02-18  
 **Based on:** Complete codebase analysis + recent implementation work
 
 ---
@@ -351,4 +351,5 @@ struct ControlCommand {
 *Updated: 2026-02-06 - Interrupt-driven buttons, hardware reset, custom Adafruit_MCP23X18*  
 *Updated: 2026-02-11 - Non-blocking DS18B20, button interrupt fixes (pullup + INTCAP clearing + INTA polling), PWM percentage fix, ESC ramping integration, core state machine functional*  
 *Updated: 2026-02-12 - Full state machine implementation (all 6 states with cross-safety transitions), multi-stage button press (1s/10s), LED board lock/unlock signaling, command constants consolidated in ControlCommand.h*  
+*Updated: 2026-02-18 - Fixed LED state initialization bug in error states (OverHeatingState, OverCurrentState, BatteryLowState) - added missing `indicateOverheat()`, `indicateOvercurrent()`, `showBatteryLevel()`, and `refreshLedIndicators()` calls in `onEnter()` methods*  
 *Based on: Complete codebase analysis + implementation*

@@ -10,6 +10,8 @@ OverHeatingState::OverHeatingState(MoaStateMachine& moaMachine, MoaDevicesManage
 void OverHeatingState::onEnter() {
     ESP_LOGI(TAG, "Entering OverHeating State");
     _devices.stopMotor();
+    _devices.indicateOverheat(true);
+    _devices.refreshLedIndicators();
 }
 
 void OverHeatingState::buttonClick(ControlCommand command) {

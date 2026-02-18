@@ -4,7 +4,7 @@
 
 FreeRTOS-based architecture using the State Pattern for managing ESC control, sensor monitoring, and user input. Designed for extensibility to support future BLE control and WiFi configuration.
 
-**Implementation Status:** Phase 1 & 2 complete - Core infrastructure fully implemented, all hardware abstraction classes complete. State machine fully functional with all 6 states handling events, cross-safety transitions, and LED indicators. Multi-stage button press (short, long 1s, very long 10s) implemented. Board lock/unlock signaling via LEDs.
+**Implementation Status:** Phase 1 & 2 complete - Core infrastructure fully implemented, all hardware abstraction classes complete. State machine fully functional with all 6 states handling events, cross-safety transitions, and LED indicators. Multi-stage button press (short, long 1s, very long 10s) implemented. LED state initialization bug fixed in error states (OverHeatingState, OverCurrentState, BatteryLowState now properly update LEDs on entry).
 
 ---
 
@@ -448,4 +448,4 @@ jetsonToESCControl/
 
 ---
 
-*Last updated: 2026-02-12*
+*Last updated: 2026-02-18*
