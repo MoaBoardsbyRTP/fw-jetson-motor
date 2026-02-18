@@ -28,7 +28,7 @@ MoaMainUnit::MoaMainUnit()
     , _flashLog()
     , _escController(PIN_ESC_PWM, 0, ESC_PWM_FREQUENCY)
     , _devicesManager(_ledControl, _escController, _flashLog, _config)
-    , _stateMachineManager(_devicesManager)
+    , _stateMachine(_devicesManager)
     , _uartCli(_config, _battControl, _currentControl, _tempControl, _escController)
 {
 }
@@ -83,7 +83,7 @@ void MoaMainUnit::begin() {
     applyConfiguration();
 
     // Set initial state
-    _stateMachineManager.setInitialState();
+    _stateMachine.setInitialState();
 
     // Create FreeRTOS tasks
     createTasks();
@@ -118,8 +118,8 @@ MoaLedControl& MoaMainUnit::getLedControl() {
     return _ledControl;
 }
 
-MoaStateMachineManager& MoaMainUnit::getStateMachineManager() {
-    return _stateMachineManager;
+MoaStateMachineWrapper& MoaMainUnit::getStateMachine() {
+    return _stateMachine;
 }
 
 MoaFlashLog& MoaMainUnit::getFlashLog() {

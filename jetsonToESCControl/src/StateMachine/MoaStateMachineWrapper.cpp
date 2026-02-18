@@ -1,30 +1,30 @@
 /**
- * @file MoaStateMachineManager.cpp
- * @brief Implementation of the MoaStateMachineManager class
+ * @file MoaStateMachineWrapper.cpp
+ * @brief Implementation of the MoaStateMachineWrapper class
  * @author Oscar Martinez
  * @date 2025-01-30
  */
 
-#include "MoaStateMachineManager.h"
+#include "MoaStateMachineWrapper.h"
 #include "esp_log.h"
 
-static const char* TAG = "SMManager";
+static const char* TAG = "SMWrapper";
 
-MoaStateMachineManager::MoaStateMachineManager(MoaDevicesManager& devices)
+MoaStateMachineWrapper::MoaStateMachineWrapper(MoaDevicesManager& devices)
     : _stateMachine(devices)
     , _devices(devices)
 {
 }
 
-MoaStateMachineManager::~MoaStateMachineManager() {
+MoaStateMachineWrapper::~MoaStateMachineWrapper() {
 }
 
-void MoaStateMachineManager::setInitialState() {
+void MoaStateMachineWrapper::setInitialState() {
     ESP_LOGI(TAG, "Setting initial state");
     _stateMachine.setState(_stateMachine.getInitState());
 }
 
-void MoaStateMachineManager::handleEvent(ControlCommand cmd) {
+void MoaStateMachineWrapper::handleEvent(ControlCommand cmd) {
     switch (cmd.controlType) {
         case CONTROL_TYPE_TIMER:
             handleTimerEvent(cmd);
@@ -55,19 +55,20 @@ void MoaStateMachineManager::handleEvent(ControlCommand cmd) {
     _devices.updateLog();
 }
 
-void MoaStateMachineManager::handleTimerEvent(ControlCommand& cmd) {
+void MoaStateMachineWrapper::handleTimerEvent(ControlCommand& cmd) {
     ESP_LOGD(TAG, "Timer event: timerId=%d", cmd.commandType);
     _stateMachine.timerExpired(cmd);
 }
 
-void MoaStateMachineManager::handleTemperatureEvent(ControlCommand& cmd) {
-    ESP_LOGI(TAG, "Temperature event: %s (%.1fC)", (cmd.commandType == 1) ? "ABOVE" : "BELOW", cmd.value / 10.0f);
+void MoaStateMachineWrapper::handleTemperatureEvent(ControlCommand& cmd) {
+    ESP_LOGI(TAG, "Temperature event: %s (%.1fC)", 
+        (cmd.commandType == COMMAND_TEMP_CROSSED_ABOVE) ? "ABOVE" : "BELOW", 
+        cmd.value / 10.0f);
     // Log the event
     _devices.logTemp(cmd.commandType, static_cast<int16_t>(cmd.value));
     
     // Update LED indicator based on event type
-    // commandType 1 = crossed above, 2 = crossed below
-    if (cmd.commandType == 1) {
+    if (cmd.commandType == COMMAND_TEMP_CROSSED_ABOVE) {
         _devices.indicateOverheat(true);
     } else {
         _devices.indicateOverheat(false);
@@ -77,24 +78,24 @@ void MoaStateMachineManager::handleTemperatureEvent(ControlCommand& cmd) {
     _stateMachine.temperatureCrossedLimit(cmd);
 }
 
-void MoaStateMachineManager::handleBatteryEvent(ControlCommand& cmd) {
+void MoaStateMachineWrapper::handleBatteryEvent(ControlCommand& cmd) {
     ESP_LOGI(TAG, "Battery event: level=%s (%.3fV)",
-        (cmd.commandType == 1) ? "HIGH" : (cmd.commandType == 2) ? "MEDIUM" : "LOW",
+        (cmd.commandType == COMMAND_BATT_LEVEL_HIGH) ? "HIGH" : 
+        (cmd.commandType == COMMAND_BATT_LEVEL_MEDIUM) ? "MEDIUM" : "LOW",
         cmd.value / 1000.0f);
     // Log the event
     _devices.logBatt(cmd.commandType, static_cast<int16_t>(cmd.value));
     
     // Update battery LEDs based on level
-    // commandType: 1=HIGH, 2=MEDIUM, 3=LOW
     MoaBattLevel level;
     switch (cmd.commandType) {
-        case 1:
+        case COMMAND_BATT_LEVEL_HIGH:
             level = MoaBattLevel::BATT_HIGH;
             break;
-        case 2:
+        case COMMAND_BATT_LEVEL_MEDIUM:
             level = MoaBattLevel::BATT_MEDIUM;
             break;
-        case 3:
+        case COMMAND_BATT_LEVEL_LOW:
         default:
             level = MoaBattLevel::BATT_LOW;
             break;
@@ -105,16 +106,16 @@ void MoaStateMachineManager::handleBatteryEvent(ControlCommand& cmd) {
     _stateMachine.batteryLevelCrossedLimit(cmd);
 }
 
-void MoaStateMachineManager::handleCurrentEvent(ControlCommand& cmd) {
+void MoaStateMachineWrapper::handleCurrentEvent(ControlCommand& cmd) {
     ESP_LOGI(TAG, "Current event: %s (%.1fA)",
-        (cmd.commandType == 1) ? "NORMAL" : (cmd.commandType == 2) ? "OVERCURRENT" : "REVERSE",
+        (cmd.commandType == COMMAND_CURRENT_NORMAL) ? "NORMAL" : 
+        (cmd.commandType == COMMAND_CURRENT_OVERCURRENT) ? "OVERCURRENT" : "REVERSE",
         cmd.value / 10.0f);
     // Log the event
     _devices.logCurrent(cmd.commandType, static_cast<int16_t>(cmd.value));
     
     // Update LED indicator based on event type
-    // commandType: 1=NORMAL, 2=OVERCURRENT, 3=REVERSE_OVERCURRENT
-    if (cmd.commandType == 2 || cmd.commandType == 3) {
+    if (cmd.commandType == COMMAND_CURRENT_OVERCURRENT || cmd.commandType == COMMAND_CURRENT_REVERSE_OVERCURRENT) {
         _devices.indicateOvercurrent(true);
     } else {
         _devices.indicateOvercurrent(false);
@@ -124,7 +125,7 @@ void MoaStateMachineManager::handleCurrentEvent(ControlCommand& cmd) {
     _stateMachine.overcurrentDetected(cmd);
 }
 
-void MoaStateMachineManager::handleButtonEvent(ControlCommand& cmd) {
+void MoaStateMachineWrapper::handleButtonEvent(ControlCommand& cmd) {
     ESP_LOGI(TAG, "Button event: cmdId=%d, eventType=%s",
         cmd.commandType,
         (cmd.value == BUTTON_EVENT_PRESS) ? "PRESS" :
