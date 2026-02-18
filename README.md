@@ -207,19 +207,19 @@ struct ControlCommand {
 
 ## Contributing
 
-This is a proprietary project. Contributions are managed through the internal development team.
+Feel free to get in touch and/or fork this project.
 
 ---
 
 ## License
 
-Proprietary - All rights reserved.
+Unlicense License. This is radically-free hardware.
 
 ---
 
 ## Contact
 
-For technical questions or issues, contact the development team.
+For technical questions or issues, contact without hesitation.
 
 ---
 
