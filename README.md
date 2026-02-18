@@ -3,13 +3,13 @@
 [![PlatformIO](https://img.shields.io/badge/PlatformIO-ESP32%20C3-orange)](https://platformio.org/)
 [![FreeRTOS](https://img.shields.io/badge/FreeRTOS-v10.4-blue)](https://www.freertos.org/)
 
-> **Moa ESC Motor Controller** - A professional-grade, FreeRTOS-based Electronic Speed Controller for electric skateboards and similar applications, running on ESP32-C3 with advanced safety features and telemetry.
+> **Moa ESC Motor Controller** - A professional-grade, FreeRTOS-based Electronic Speed Controller for electric surf boards, running on ESP32-C3 with advanced safety features and telemetry. Yagabunga Nanus!
 
 ---
 
 ## Overview
 
-This repository contains the firmware for the **Moa ESC Controller**, a sophisticated motor control system designed for electric skateboards and personal electric vehicles. Built on the ESP32-C3 platform with FreeRTOS, it provides real-time sensor monitoring, state-machine-based safety management, and responsive user input handling.
+This repository contains the firmware for the **Moa ESC Controller**, a sophisticated motor control system designed for electric surf boards. Built on the ESP32-C3 platform with FreeRTOS, it provides real-time sensor monitoring, state-machine-based safety management, and responsive user input handling.
 
 ### Key Features
 
@@ -223,4 +223,4 @@ For technical questions or issues, contact the development team.
 
 ---
 
-*Built with PlatformIO and FreeRTOS for ESP32-C3*
+*Built with PlatformIO and FreeRTOS for ESP32-C3 - Yagabunga Nanus!*
