@@ -21,8 +21,8 @@ void ControlTask(void* pvParameters) {
         // Block until an event arrives in the queue
         if (xQueueReceive(unit->getEventQueue(), &cmd, portMAX_DELAY) == pdTRUE) {
             ESP_LOGD(TAG, "Event received: controlType=%d, commandType=%d, value=%d", cmd.controlType, cmd.commandType, cmd.value);
-            // Route event to state machine manager
-            unit->getStateMachineManager().handleEvent(cmd);
+            // Route event to state machine wrapper
+            unit->getStateMachine().handleEvent(cmd);
         }
     }
 }

@@ -1,11 +1,11 @@
 /**
- * @file MoaStateMachineManager.h
- * @brief Event router and state machine wrapper
+ * @file MoaStateMachineWrapper.h
+ * @brief Wrapper that adapts control events to the state machine
  * @author Oscar Martinez
  * @date 2025-01-30
  * 
- * MoaStateMachineManager wraps the state machine and routes incoming
- * ControlCommand events to the appropriate state machine methods.
+ * Wraps the MoaStateMachine and adapts ControlCommand events to state machine methods.
+ * Handles event-specific logic like LED updates and logging before delegating to the state machine.
  */
 
 #pragma once
@@ -16,36 +16,36 @@
 #include "StateMachine/MoaStateMachine.h"
 
 /**
- * @brief Event router and state machine wrapper
+ * @brief Wrapper that adapts control events to the state machine
  * 
- * Routes ControlCommand events to the appropriate state machine methods
- * based on controlType. Also handles logging and device updates.
+ * Wraps the MoaStateMachine and adapts ControlCommand events to state machine methods.
+ * Handles event-specific logic like LED updates and logging before delegating to the state machine.
  * 
  * ## Usage
  * @code
- * MoaStateMachineManager manager(devicesManager);
- * manager.setInitialState();
+ * MoaStateMachineWrapper wrapper(devicesManager);
+ * wrapper.setInitialState();
  * 
  * // In ControlTask:
  * ControlCommand cmd;
  * if (xQueueReceive(queue, &cmd, portMAX_DELAY)) {
- *     manager.handleEvent(cmd);
+ *     wrapper.handleEvent(cmd);
  * }
  * @endcode
  */
-class MoaStateMachineManager {
+class MoaStateMachineWrapper {
 public:
     /**
-     * @brief Construct a new MoaStateMachineManager
+     * @brief Construct a new MoaStateMachineWrapper
      * 
-     * @param devices Reference to devices manager for output actions
+     * @param devices Reference to devices manager for LED/log control
      */
-    MoaStateMachineManager(MoaDevicesManager& devices);
+    MoaStateMachineWrapper(MoaDevicesManager& devices);
 
     /**
-     * @brief Destructor
+     * @brief Destroy the MoaStateMachineWrapper
      */
-    ~MoaStateMachineManager();
+    ~MoaStateMachineWrapper();
 
     /**
      * @brief Set the initial state of the state machine

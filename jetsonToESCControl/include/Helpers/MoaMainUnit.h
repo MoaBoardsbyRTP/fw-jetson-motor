@@ -31,7 +31,7 @@
 #include "ESCController.h"
 
 #include "MoaDevicesManager.h"
-#include "MoaStateMachineManager.h"
+#include "MoaStateMachineWrapper.h"
 #include "MoaStatsAggregator.h"
 #include "ConfigManager.h"
 #include "UartCli.h"
@@ -148,10 +148,10 @@ public:
     MoaLedControl& getLedControl();
 
     /**
-     * @brief Get reference to state machine manager
-     * @return MoaStateMachineManager& Event router and state machine
+     * @brief Get reference to state machine wrapper
+     * @return MoaStateMachineWrapper& State machine wrapper
      */
-    MoaStateMachineManager& getStateMachineManager();
+    MoaStateMachineWrapper& getStateMachine();
 
     /**
      * @brief Get reference to flash log
@@ -206,7 +206,7 @@ private:
     // === Managers ===
     ConfigManager _config;
     MoaDevicesManager _devicesManager;
-    MoaStateMachineManager _stateMachineManager;
+    MoaStateMachineWrapper _stateMachine;
     MoaStatsAggregator _statsAggregator;
     UartCli _uartCli;
 
