@@ -19,6 +19,7 @@ MoaMainUnit::MoaMainUnit()
     , _controlTaskHandle(nullptr)
     , _statsTaskHandle(nullptr)
     , _cliTaskHandle(nullptr)
+    , _otaTaskHandle(nullptr)
     , _mcpDevice(MCP23018_I2C_ADDR)
     , _tempControl(_eventQueue, PIN_TEMP_SENSE)
     , _battControl(_eventQueue, PIN_BATT_LEVEL_SENSE)
@@ -27,9 +28,10 @@ MoaMainUnit::MoaMainUnit()
     , _ledControl(_mcpDevice)
     , _flashLog()
     , _escController(PIN_ESC_PWM, 0, ESC_PWM_FREQUENCY)
-    , _devicesManager(_ledControl, _escController, _flashLog, _config)
+    , _devicesManager(_ledControl, _escController, _flashLog, _config, _otaManager)
     , _stateMachine(_devicesManager)
     , _uartCli(_config, _battControl, _currentControl, _tempControl, _escController)
+    , _otaManager(OTA_AP_SSID, OTA_AP_PASSWORD, OTA_HOSTNAME)
 {
 }
 
@@ -140,6 +142,10 @@ MoaDevicesManager& MoaMainUnit::getDevicesManager() {
 
 UartCli& MoaMainUnit::getUartCli() {
     return _uartCli;
+}
+
+MoaOTAManager& MoaMainUnit::getOTAManager() {
+    return _otaManager;
 }
 
 void MoaMainUnit::initI2C() {
@@ -265,4 +271,16 @@ void MoaMainUnit::createTasks() {
         0
     );
     ESP_LOGI(TAG, "CliTask created (stack=%d, prio=%d)", TASK_STACK_CLI, TASK_PRIORITY_CLI);
+
+    // Create OtaTask
+    xTaskCreatePinnedToCore(
+        OtaTask,
+        "OtaTask",
+        TASK_STACK_OTA,
+        this,
+        TASK_PRIORITY_OTA,
+        &_otaTaskHandle,
+        0
+    );
+    ESP_LOGI(TAG, "OtaTask created (stack=%d, prio=%d)", TASK_STACK_OTA, TASK_PRIORITY_OTA);
 }

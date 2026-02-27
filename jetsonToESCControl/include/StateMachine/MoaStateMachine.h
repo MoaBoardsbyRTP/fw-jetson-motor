@@ -11,6 +11,7 @@ class MoaStateMachine{
     MoaState* _overHeatingState;
     MoaState* _overCurrentState;
     MoaState* _batteryLowState;
+    MoaState* _configState;
 public:
     MoaStateMachine(MoaDevicesManager& devices);
     void buttonClick(ControlCommand command);
@@ -25,4 +26,5 @@ public:
     MoaState* getOverHeatingState();
     MoaState* getOverCurrentState();
     MoaState* getBatteryLowState();
+    MoaState* getConfigState();
 };

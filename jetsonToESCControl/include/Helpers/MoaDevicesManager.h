@@ -18,6 +18,7 @@
 #include "MoaTimer.h"
 #include "MoaBattControl.h"  // For MoaBattLevel enum
 #include "ConfigManager.h"
+#include "MoaOTAManager.h"
 
 /**
  * @brief Output device facade
@@ -43,8 +44,11 @@ public:
      * @param leds Reference to LED controller
      * @param esc Reference to ESC controller
      * @param log Reference to flash logger
+     * @param config Reference to configuration manager
+     * @param otaManager Reference to OTA manager
      */
-    MoaDevicesManager(MoaLedControl& leds, ESCController& esc, MoaFlashLog& log, ConfigManager& config);
+    MoaDevicesManager(MoaLedControl& leds, ESCController& esc, MoaFlashLog& log,
+                      ConfigManager& config, MoaOTAManager& otaManager);
 
     /**
      * @brief Destructor
@@ -165,6 +169,18 @@ public:
      */
     void exitConfigMode();
 
+    // === OTA Control ===
+
+    /**
+     * @brief Start WiFi AP and OTA (enter config state)
+     */
+    void startOTA();
+
+    /**
+     * @brief Stop WiFi AP and OTA (exit config state)
+     */
+    void stopOTA();
+
     /**
      * @brief Turn all LEDs off
      */
@@ -238,6 +254,7 @@ private:
     ESCController& _esc;
     MoaFlashLog& _log;
     ConfigManager& _config;
+    MoaOTAManager& _otaManager;
     QueueHandle_t _eventQueue;
     MoaTimer* _timers[MOA_TIMER_MAX_INSTANCES];
 

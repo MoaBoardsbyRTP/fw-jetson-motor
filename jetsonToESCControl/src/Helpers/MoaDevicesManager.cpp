@@ -10,11 +10,13 @@
 
 static const char* TAG = "Devices";
 
-MoaDevicesManager::MoaDevicesManager(MoaLedControl& leds, ESCController& esc, MoaFlashLog& log, ConfigManager& config)
+MoaDevicesManager::MoaDevicesManager(MoaLedControl& leds, ESCController& esc, MoaFlashLog& log,
+                                     ConfigManager& config, MoaOTAManager& otaManager)
     : _leds(leds)
     , _esc(esc)
     , _log(log)
     , _config(config)
+    , _otaManager(otaManager)
     , _eventQueue(nullptr)
     , _lastBattLevel(MoaBattLevel::BATT_HIGH)
     , _lastOverheat(false)
@@ -174,6 +176,16 @@ void MoaDevicesManager::enterConfigMode() {
 void MoaDevicesManager::exitConfigMode() {
     ESP_LOGI(TAG, "Exiting config mode");
     _leds.setConfigModeIndication(false);
+}
+
+void MoaDevicesManager::startOTA() {
+    ESP_LOGI(TAG, "Starting OTA");
+    _otaManager.begin();
+}
+
+void MoaDevicesManager::stopOTA() {
+    ESP_LOGI(TAG, "Stopping OTA");
+    _otaManager.stop();
 }
 
 void MoaDevicesManager::allLedsOff() {

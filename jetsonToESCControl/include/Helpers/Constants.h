@@ -264,3 +264,22 @@
  * @brief Duty cycle for FULL_THROTTLE_MODE (10-bit, servo range ~51-102)
  */
 #define ESC_FULL_THROTTLE_MODE        102
+
+// =============================================================================
+// OTA Configuration
+// =============================================================================
+
+/**
+ * @brief WiFi Soft AP SSID for OTA updates
+ */
+#define OTA_AP_SSID         "CLOTENCSACOLLBATO"
+
+/**
+ * @brief WiFi Soft AP password (min 8 chars, or nullptr for open)
+ */
+#define OTA_AP_PASSWORD     "Xmp13051985!"
+
+/**
+ * @brief mDNS hostname for OTA discovery
+ */
+#define OTA_HOSTNAME        "MOA-ESC"
