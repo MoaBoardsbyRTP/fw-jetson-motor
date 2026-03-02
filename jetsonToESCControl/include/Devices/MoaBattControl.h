@@ -36,14 +36,14 @@
 /**
  * @brief Default confirmation time for low->stop transition (ms)
  */
-#define MOA_BATT_STOP_CONFIRM_MS 300
+#define MOA_BATT_STOP_CONFIRM_MS 500
 
 /**
  * @brief Battery level state enumeration
  */
 enum class MoaBattLevel {
     BATT_STOP,    ///< Battery below stop threshold (critical)
-    BATT_LOW,     ///< Battery below low threshold 
+    BATT_LOW,     ///< Battery below low threshold (warning)
     BATT_MEDIUM,  ///< Battery between low and high thresholds
     BATT_HIGH     ///< Battery above high threshold (fully charged)
 };
@@ -64,6 +64,7 @@ enum class MoaBattLevel {
  *       - COMMAND_BATT_LEVEL_HIGH: Entered HIGH zone (above high threshold)
  *       - COMMAND_BATT_LEVEL_MEDIUM: Entered MEDIUM zone (between thresholds)
  *       - COMMAND_BATT_LEVEL_LOW: Entered LOW zone (below low threshold)
+ *       - COMMAND_BATT_LEVEL_STOP: Entered STOP zone (below stop threshold)
  * 
  * ## Voltage Divider Configuration
  * For a voltage divider with R1 (top) and R2 (bottom):
