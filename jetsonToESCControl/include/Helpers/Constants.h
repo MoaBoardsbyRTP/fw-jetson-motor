@@ -52,6 +52,11 @@
 #define BATT_THRESHOLD_LOW      19.5f
 
 /**
+ * @brief Battery stop threshold (V)
+ */
+#define BATT_THRESHOLD_STOP     18.9f
+
+/**
  * @brief Battery hysteresis (V)
  */
 #define BATT_HYSTERESIS         0.2f
