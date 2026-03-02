@@ -83,6 +83,7 @@ public:
     float battHigh;
     float battMedium;
     float battLow;
+    float battStop;
     float battHysteresis;
 
     // === Temperature Thresholds (°C) ===

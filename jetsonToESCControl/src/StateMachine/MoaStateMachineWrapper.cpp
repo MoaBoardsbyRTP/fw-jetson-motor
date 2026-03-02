@@ -81,7 +81,8 @@ void MoaStateMachineWrapper::handleTemperatureEvent(ControlCommand& cmd) {
 void MoaStateMachineWrapper::handleBatteryEvent(ControlCommand& cmd) {
     ESP_LOGI(TAG, "Battery event: level=%s (%.3fV)",
         (cmd.commandType == COMMAND_BATT_LEVEL_HIGH) ? "HIGH" : 
-        (cmd.commandType == COMMAND_BATT_LEVEL_MEDIUM) ? "MEDIUM" : "LOW",
+        (cmd.commandType == COMMAND_BATT_LEVEL_MEDIUM) ? "MEDIUM" :
+        (cmd.commandType == COMMAND_BATT_LEVEL_LOW) ? "LOW" : "STOP",
         cmd.value / 1000.0f);
     // Log the event
     _devices.logBatt(cmd.commandType, static_cast<int16_t>(cmd.value));
@@ -94,6 +95,9 @@ void MoaStateMachineWrapper::handleBatteryEvent(ControlCommand& cmd) {
             break;
         case COMMAND_BATT_LEVEL_MEDIUM:
             level = MoaBattLevel::BATT_MEDIUM;
+            break;
+        case COMMAND_BATT_LEVEL_STOP:
+            level = MoaBattLevel::BATT_STOP;
             break;
         case COMMAND_BATT_LEVEL_LOW:
         default:

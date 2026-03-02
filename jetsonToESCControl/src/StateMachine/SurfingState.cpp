@@ -49,9 +49,13 @@ void SurfingState::temperatureCrossedLimit(ControlCommand command) {
 void SurfingState::batteryLevelCrossedLimit(ControlCommand command) {
     ESP_LOGD(TAG, "batteryLevelCrossedLimit (cmdType=%d, val=%d)", command.commandType, command.value);
     switch(command.commandType){
-        case COMMAND_BATT_LEVEL_LOW:
-            ESP_LOGI(TAG, "Battery low - going to Battery Low State");
+        case COMMAND_BATT_LEVEL_STOP:
+            ESP_LOGI(TAG, "Battery critical stop - disengaging throttle and going to Battery Low State");
+            _devices.disengageThrottle();
             _moaMachine.setState(_moaMachine.getBatteryLowState());
+            break;
+        case COMMAND_BATT_LEVEL_LOW:
+            ESP_LOGW(TAG, "Battery low warning while surfing (no forced stop)");
             break;
     }
 }

@@ -153,6 +153,7 @@ void UartCli::handleDump() {
     printSetting("batt_high");
     printSetting("batt_med");
     printSetting("batt_low");
+    printSetting("batt_stop");
     printSetting("batt_hyst");
 
     Serial.println(F("--- Temperature Thresholds (C) ---"));
@@ -180,7 +181,7 @@ void UartCli::handleHelp() {
     Serial.println(F("  esc_t25, esc_t50, esc_t75, esc_t100, esc_t75_100  (ms)"));
     Serial.println(F("  esc_eco, esc_paddle, esc_break, esc_full           (duty 0-1023)"));
     Serial.println(F("  esc_ramp                                           (%/s)"));
-    Serial.println(F("  batt_high, batt_med, batt_low, batt_hyst           (V)"));
+    Serial.println(F("  batt_high, batt_med, batt_low, batt_stop, batt_hyst (V)"));
     Serial.println(F("  temp_tgt, temp_hyst                                (C)"));
     Serial.println(F("  curr_oc, curr_rev, curr_hyst                       (A)"));
     Serial.println();
@@ -210,6 +211,7 @@ bool UartCli::printSetting(const char* key) {
     if (strcmp(key, "batt_high") == 0)    { Serial.printf("  %-12s = %.2f V\n", key, _config.battHigh); return true; }
     if (strcmp(key, "batt_med") == 0)     { Serial.printf("  %-12s = %.2f V\n", key, _config.battMedium); return true; }
     if (strcmp(key, "batt_low") == 0)     { Serial.printf("  %-12s = %.2f V\n", key, _config.battLow); return true; }
+    if (strcmp(key, "batt_stop") == 0)    { Serial.printf("  %-12s = %.2f V\n", key, _config.battStop); return true; }
     if (strcmp(key, "batt_hyst") == 0)    { Serial.printf("  %-12s = %.2f V\n", key, _config.battHysteresis); return true; }
 
     // Temperature
@@ -243,6 +245,7 @@ bool UartCli::setSetting(const char* key, const char* value) {
     if (strcmp(key, "batt_high") == 0)    { _config.battHigh = atof(value); return true; }
     if (strcmp(key, "batt_med") == 0)     { _config.battMedium = atof(value); return true; }
     if (strcmp(key, "batt_low") == 0)     { _config.battLow = atof(value); return true; }
+    if (strcmp(key, "batt_stop") == 0)    { _config.battStop = atof(value); return true; }
     if (strcmp(key, "batt_hyst") == 0)    { _config.battHysteresis = atof(value); return true; }
 
     // Temperature (float)
