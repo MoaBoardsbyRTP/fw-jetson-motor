@@ -1,55 +1,37 @@
 /**
  * @file MoaOTAManager.h
- * @brief WiFi STA + ArduinoOTA manager for wireless firmware updates
+ * @brief ArduinoOTA manager using shared WiFi manager
  * @author Oscar Martinez
- * @date 2026-02-27
+ * @date 2026-02-28
  * 
- * Connects to an existing WiFi router (STA mode) and enables ArduinoOTA
- * so the board can be flashed wirelessly. WiFi credentials are read from
- * ConfigManager (NVS-backed, CLI-configurable).
- * Designed to run in its own FreeRTOS task.
+ * Uses MoaWiFiManager for WiFi lifecycle. WiFi credentials and OTA
+ * hostname are provided by ConfigManager (NVS-backed, CLI-configurable).
  */
 
 #pragma once
 
 #include <Arduino.h>
-#include <WiFi.h>
 #include <ArduinoOTA.h>
 #include "esp_log.h"
+#include "MoaWiFiManager.h"
 
 class ConfigManager;
 
 /**
- * @brief WiFi connection timeout in milliseconds
- */
-#define OTA_WIFI_CONNECT_TIMEOUT_MS 15000
-
-/**
- * @brief Manages WiFi STA connection and ArduinoOTA
- * 
- * Connects to a router using credentials from ConfigManager and enables
- * ArduinoOTA for wireless firmware updates.
- * 
- * ## Usage
- * @code
- * MoaOTAManager ota(config);
- * ota.begin();   // connects to WiFi + starts OTA
- * // In a task loop:
- * ota.handle();
- * @endcode
+ * @brief Manages ArduinoOTA using shared WiFi manager
  */
 class MoaOTAManager {
 public:
     /**
      * @brief Construct OTA manager
      * @param config Reference to ConfigManager for WiFi credentials
+     * @param wifiManager Reference to shared WiFi manager
      */
-    explicit MoaOTAManager(ConfigManager& config);
-    ~MoaOTAManager() = default;
+    MoaOTAManager(ConfigManager& config, MoaWiFiManager& wifiManager);
 
     /**
-     * @brief Connect to WiFi and start ArduinoOTA
-     * @return true if WiFi connected and OTA initialized
+     * @brief Start ArduinoOTA (WiFi must be started separately)
+     * @return true if OTA initialized successfully
      */
     bool begin();
 
@@ -64,25 +46,19 @@ public:
     bool isUpdating() const { return _updating; }
 
     /**
-     * @brief Check if WiFi is connected
-     */
-    bool isConnected() const { return WiFi.status() == WL_CONNECTED; }
-
-    /**
-     * @brief Disconnect WiFi and stop ArduinoOTA
-     */
-    void stop();
-
-    /**
-     * @brief Check if OTA manager is active (WiFi connected + OTA running)
+     * @brief Check if OTA is active
      */
     bool isActive() const { return _active; }
 
+    /**
+     * @brief Stop ArduinoOTA
+     */
+    void stop();
+
 private:
     ConfigManager& _config;
+    MoaWiFiManager& _wifiManager;
     bool _updating;
     bool _active;
-
-    bool connectWiFi();
     void setupOTA();
 };

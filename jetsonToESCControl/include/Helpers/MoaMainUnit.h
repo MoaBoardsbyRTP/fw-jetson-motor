@@ -35,6 +35,7 @@
 #include "MoaStatsAggregator.h"
 #include "ConfigManager.h"
 #include "UartCli.h"
+#include "MoaWiFiManager.h"
 #include "MoaOTAManager.h"
 #include "StatsReading.h"
 
@@ -215,11 +216,12 @@ private:
 
     // === Managers ===
     ConfigManager _config;
+    MoaWiFiManager _wifiManager;
+    MoaOTAManager _otaManager;
     MoaDevicesManager _devicesManager;
     MoaStateMachineWrapper _stateMachine;
     MoaStatsAggregator _statsAggregator;
     UartCli _uartCli;
-    MoaOTAManager _otaManager;
 
     /**
      * @brief Initialize I2C bus

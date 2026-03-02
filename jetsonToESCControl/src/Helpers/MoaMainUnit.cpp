@@ -28,10 +28,11 @@ MoaMainUnit::MoaMainUnit()
     , _ledControl(_mcpDevice)
     , _flashLog()
     , _escController(PIN_ESC_PWM, 0, ESC_PWM_FREQUENCY)
-    , _devicesManager(_ledControl, _escController, _flashLog, _config, _otaManager)
+    , _wifiManager(OTA_AP_SSID, OTA_AP_PASSWORD)
+    , _otaManager(_config, _wifiManager)
+    , _devicesManager(_ledControl, _escController, _flashLog, _config, _wifiManager, _otaManager)
     , _stateMachine(_devicesManager)
     , _uartCli(_config, _battControl, _currentControl, _tempControl, _escController)
-    , _otaManager(_config)
 {
 }
 

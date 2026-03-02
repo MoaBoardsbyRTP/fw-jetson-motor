@@ -11,11 +11,12 @@
 static const char* TAG = "Devices";
 
 MoaDevicesManager::MoaDevicesManager(MoaLedControl& leds, ESCController& esc, MoaFlashLog& log,
-                                     ConfigManager& config, MoaOTAManager& otaManager)
+                                     ConfigManager& config, MoaWiFiManager& wifiManager, MoaOTAManager& otaManager)
     : _leds(leds)
     , _esc(esc)
     , _log(log)
     , _config(config)
+    , _wifiManager(wifiManager)
     , _otaManager(otaManager)
     , _eventQueue(nullptr)
     , _lastBattLevel(MoaBattLevel::BATT_HIGH)
@@ -100,20 +101,23 @@ bool MoaDevicesManager::startTimer(uint8_t timerId, uint32_t durationMs) {
     // Lazy-create the timer on first use
     if (_timers[timerId] == nullptr) {
         _timers[timerId] = new MoaTimer(_eventQueue, timerId);
-        ESP_LOGI(TAG, "Timer %d created", timerId);
     }
 
-    return _timers[timerId]->start(durationMs);
+    _timers[timerId]->start(durationMs);
+    return true;
 }
 
 bool MoaDevicesManager::stopTimer(uint8_t timerId) {
     if (timerId >= MOA_TIMER_MAX_INSTANCES) {
+        ESP_LOGW(TAG, "stopTimer: invalid timerId=%d", timerId);
         return false;
     }
     if (_timers[timerId] == nullptr) {
-        return true;  // Not created = not running
+        return true;  // Already stopped/non-existent
     }
-    return _timers[timerId]->stop();
+
+    _timers[timerId]->stop();
+    return true;
 }
 
 bool MoaDevicesManager::isTimerRunning(uint8_t timerId) const {
@@ -144,7 +148,6 @@ void MoaDevicesManager::indicateOvercurrent(bool active) {
     if (active) {
         _leds.startBlink(LED_INDEX_OVERCURRENT, LED_WARNING_BLINK_MS);
     } else {
-        // Restore locked/unlocked solid state
         _leds.stopBlink(LED_INDEX_OVERCURRENT, _boardLocked);
     }
 }
@@ -179,13 +182,20 @@ void MoaDevicesManager::exitConfigMode() {
 }
 
 void MoaDevicesManager::startOTA() {
-    ESP_LOGI(TAG, "Starting OTA");
-    _otaManager.begin();
+    ESP_LOGI(TAG, "Starting WiFi + OTA");
+    // Start WiFi first, then OTA
+    if (_wifiManager.start()) {
+        _otaManager.begin();
+    } else {
+        ESP_LOGE(TAG, "Failed to start WiFi");
+    }
 }
 
 void MoaDevicesManager::stopOTA() {
-    ESP_LOGI(TAG, "Stopping OTA");
+    ESP_LOGI(TAG, "Stopping WiFi + OTA");
+    // Stop OTA first, then WiFi
     _otaManager.stop();
+    _wifiManager.stop();
 }
 
 void MoaDevicesManager::allLedsOff() {
