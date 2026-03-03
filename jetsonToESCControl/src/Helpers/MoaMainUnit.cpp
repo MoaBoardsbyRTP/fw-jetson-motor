@@ -28,8 +28,8 @@ MoaMainUnit::MoaMainUnit()
     , _ledControl(_mcpDevice)
     , _flashLog()
     , _escController(PIN_ESC_PWM, 0, ESC_PWM_FREQUENCY)
-    , _wifiManager(OTA_AP_SSID, OTA_AP_PASSWORD)
-    , _otaManager(_config, _wifiManager)
+    , _wifiManager(_config.wifiSsid, _config.wifiPassword)
+    , _otaManager(_wifiManager, _config.otaHostname)
     , _devicesManager(_ledControl, _escController, _flashLog, _config, _wifiManager, _otaManager)
     , _stateMachine(_devicesManager)
     , _uartCli(_config, _battControl, _currentControl, _tempControl, _escController)
@@ -197,6 +197,8 @@ void MoaMainUnit::initHardware() {
 void MoaMainUnit::applyConfiguration() {
     // Load settings from NVS (falls back to Constants.h defaults)
     _config.begin();
+    _wifiManager.setCredentials(_config.wifiSsid, _config.wifiPassword);
+    _otaManager.setHostname(_config.otaHostname);
 
     // Apply NVS-backed settings to sensor devices and ESC
     _config.applyTo(_battControl, _currentControl, _tempControl, _escController);

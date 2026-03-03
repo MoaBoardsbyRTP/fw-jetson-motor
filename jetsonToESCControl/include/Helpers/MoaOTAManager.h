@@ -4,8 +4,7 @@
  * @author Oscar Martinez
  * @date 2026-02-28
  * 
- * Uses MoaWiFiManager for WiFi lifecycle. WiFi credentials and OTA
- * hostname are provided by ConfigManager (NVS-backed, CLI-configurable).
+ * Uses MoaWiFiManager for WiFi lifecycle.
  */
 
 #pragma once
@@ -15,8 +14,6 @@
 #include "esp_log.h"
 #include "MoaWiFiManager.h"
 
-class ConfigManager;
-
 /**
  * @brief Manages ArduinoOTA using shared WiFi manager
  */
@@ -24,10 +21,15 @@ class MoaOTAManager {
 public:
     /**
      * @brief Construct OTA manager
-     * @param config Reference to ConfigManager for WiFi credentials
      * @param wifiManager Reference to shared WiFi manager
+     * @param hostname Optional mDNS hostname for OTA discovery
      */
-    MoaOTAManager(ConfigManager& config, MoaWiFiManager& wifiManager);
+    MoaOTAManager(MoaWiFiManager& wifiManager, const char* hostname = nullptr);
+
+    /**
+     * @brief Set OTA mDNS hostname
+     */
+    void setHostname(const char* hostname);
 
     /**
      * @brief Start ArduinoOTA (WiFi must be started separately)
@@ -56,8 +58,8 @@ public:
     void stop();
 
 private:
-    ConfigManager& _config;
     MoaWiFiManager& _wifiManager;
+    const char* _hostname;
     bool _updating;
     bool _active;
     void setupOTA();

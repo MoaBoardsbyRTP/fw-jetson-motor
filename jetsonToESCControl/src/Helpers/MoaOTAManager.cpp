@@ -6,15 +6,18 @@
  */
 
 #include "MoaOTAManager.h"
-#include "ConfigManager.h"
 
 static const char* TAG = "OTAManager";
 
-MoaOTAManager::MoaOTAManager(ConfigManager& config, MoaWiFiManager& wifiManager)
-    : _config(config)
-    , _wifiManager(wifiManager)
+MoaOTAManager::MoaOTAManager(MoaWiFiManager& wifiManager, const char* hostname)
+    : _wifiManager(wifiManager)
+    , _hostname(hostname)
     , _updating(false)
     , _active(false) {}
+
+void MoaOTAManager::setHostname(const char* hostname) {
+    _hostname = hostname;
+}
 
 bool MoaOTAManager::begin() {
     if (_active) {
@@ -56,10 +59,9 @@ void MoaOTAManager::stop() {
 }
 
 void MoaOTAManager::setupOTA() {
-    const char* hostname = _config.otaHostname;
-    if (hostname[0] != '\0') {
-        ArduinoOTA.setHostname(hostname);
-        ESP_LOGI(TAG, "OTA hostname: %s", hostname);
+    if (_hostname != nullptr && _hostname[0] != '\0') {
+        ArduinoOTA.setHostname(_hostname);
+        ESP_LOGI(TAG, "OTA hostname: %s", _hostname);
     }
 
     ArduinoOTA.onStart([this]() {

@@ -32,6 +32,13 @@ public:
     ~MoaWiFiManager() = default;
 
     /**
+     * @brief Update AP credentials
+     * @param apSsid Soft AP SSID
+     * @param apPassword Soft AP password (nullptr or empty for open AP)
+     */
+    void setCredentials(const char* apSsid, const char* apPassword = nullptr);
+
+    /**
      * @brief Start WiFi AP
      * @return true if AP started successfully
      */
@@ -59,8 +66,9 @@ public:
     int getStationCount() const;
 
 private:
-    const char* _apSsid;
-    const char* _apPassword;
+    char _apSsid[33];
+    char _apPassword[65];
+    bool _hasPassword;
     bool _running;
 
     bool startAP();

@@ -6,13 +6,37 @@
  */
 
 #include "MoaWiFiManager.h"
+#include "Constants.h"
 
 static const char* TAG = "WiFiManager";
 
 MoaWiFiManager::MoaWiFiManager(const char* apSsid, const char* apPassword)
-    : _apSsid(apSsid)
-    , _apPassword(apPassword)
-    , _running(false) {}
+    : _hasPassword(false)
+    , _running(false) {
+    setCredentials(apSsid, apPassword);
+}
+
+void MoaWiFiManager::setCredentials(const char* apSsid, const char* apPassword) {
+    if (apSsid == nullptr || apSsid[0] == '\0') {
+        strncpy(_apSsid, OTA_AP_SSID, sizeof(_apSsid) - 1);
+    } else {
+        strncpy(_apSsid, apSsid, sizeof(_apSsid) - 1);
+    }
+    _apSsid[sizeof(_apSsid) - 1] = '\0';
+
+    if (apPassword == nullptr || apPassword[0] == '\0') {
+        _apPassword[0] = '\0';
+        _hasPassword = false;
+    } else {
+        strncpy(_apPassword, apPassword, sizeof(_apPassword) - 1);
+        _apPassword[sizeof(_apPassword) - 1] = '\0';
+        _hasPassword = true;
+    }
+
+    if (_running) {
+        ESP_LOGW(TAG, "Credentials updated while AP running; changes apply after restart");
+    }
+}
 
 bool MoaWiFiManager::start() {
     if (_running) {
@@ -73,7 +97,7 @@ bool MoaWiFiManager::startAP() {
 
     // Start soft AP
     bool result;
-    if (_apPassword) {
+    if (_hasPassword) {
         result = WiFi.softAP(_apSsid, _apPassword);
     } else {
         result = WiFi.softAP(_apSsid);
