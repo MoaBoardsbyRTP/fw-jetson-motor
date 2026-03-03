@@ -95,6 +95,11 @@ public:
     float currentReverse;
     float currentHysteresis;
 
+    // === WiFi / OTA ===
+    char wifiSsid[33];          ///< WiFi SSID (max 32 chars + null)
+    char wifiPassword[65];      ///< WiFi password (max 64 chars + null)
+    char otaHostname[33];       ///< mDNS hostname for OTA discovery
+
     // === Throttle helpers (use config values instead of Constants.h) ===
 
     /**

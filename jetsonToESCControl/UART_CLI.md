@@ -55,6 +55,7 @@
 | `batt_high` | High battery threshold | 21.5 |
 | `batt_med` | Medium battery threshold | 20.0 |
 | `batt_low` | Low battery threshold | 19.5 |
+| `batt_stop` | Critical stop threshold | 18.9 |
 | `batt_hyst` | Hysteresis | 0.2 |
 
 ### Temperature Thresholds (°C)
@@ -71,6 +72,17 @@
 | `curr_oc` | Overcurrent threshold | 150.0 |
 | `curr_rev` | Reverse overcurrent threshold | -150.0 |
 | `curr_hyst` | Hysteresis | 5.0 |
+
+### WiFi / OTA (Strings)
+
+| Key | Description | Default |
+|-----|-------------|--------|
+| `wifi_ssid` | WiFi router SSID to connect to | `CLOTENCSACOLLBATO` |
+| `wifi_pass` | WiFi router password | `Xmp13051985!` |
+| `ota_host` | mDNS hostname for OTA discovery | `MOA-ESC` |
+
+> **Note:** WiFi credentials take effect on next OTA session (enter ConfigState via very long press STOP).
+> Use `set wifi_ssid MyNetwork` then `save` to persist. The board connects to the router in STA mode.
 
 ---
 

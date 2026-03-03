@@ -31,7 +31,7 @@ MoaMainUnit::MoaMainUnit()
     , _devicesManager(_ledControl, _escController, _flashLog, _config, _otaManager)
     , _stateMachine(_devicesManager)
     , _uartCli(_config, _battControl, _currentControl, _tempControl, _escController)
-    , _otaManager(OTA_AP_SSID, OTA_AP_PASSWORD, OTA_HOSTNAME)
+    , _otaManager(_config)
 {
 }
 

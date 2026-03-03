@@ -164,6 +164,11 @@ void UartCli::handleDump() {
     printSetting("curr_oc");
     printSetting("curr_rev");
     printSetting("curr_hyst");
+
+    Serial.println(F("--- WiFi / OTA ---"));
+    printSetting("wifi_ssid");
+    printSetting("wifi_pass");
+    printSetting("ota_host");
 }
 
 void UartCli::handleHelp() {
@@ -184,8 +189,9 @@ void UartCli::handleHelp() {
     Serial.println(F("  batt_high, batt_med, batt_low, batt_stop, batt_hyst (V)"));
     Serial.println(F("  temp_tgt, temp_hyst                                (C)"));
     Serial.println(F("  curr_oc, curr_rev, curr_hyst                       (A)"));
+    Serial.println(F("  wifi_ssid, wifi_pass, ota_host                      (string)"));
     Serial.println();
-    Serial.println(F("Workflow: set <key> <val> → apply → (test) → save"));
+    Serial.println(F("Workflow: set <key> <val> \u2192 apply \u2192 (test) \u2192 save"));
 }
 
 void UartCli::applyConfig() {
@@ -223,6 +229,11 @@ bool UartCli::printSetting(const char* key) {
     if (strcmp(key, "curr_rev") == 0)     { Serial.printf("  %-12s = %.1f A\n", key, _config.currentReverse); return true; }
     if (strcmp(key, "curr_hyst") == 0)    { Serial.printf("  %-12s = %.1f A\n", key, _config.currentHysteresis); return true; }
 
+    // WiFi / OTA
+    if (strcmp(key, "wifi_ssid") == 0)    { Serial.printf("  %-12s = %s\n", key, _config.wifiSsid); return true; }
+    if (strcmp(key, "wifi_pass") == 0)    { Serial.printf("  %-12s = %s\n", key, _config.wifiPassword); return true; }
+    if (strcmp(key, "ota_host") == 0)     { Serial.printf("  %-12s = %s\n", key, _config.otaHostname); return true; }
+
     return false;
 }
 
@@ -256,6 +267,11 @@ bool UartCli::setSetting(const char* key, const char* value) {
     if (strcmp(key, "curr_oc") == 0)      { _config.currentOvercurrent = atof(value); return true; }
     if (strcmp(key, "curr_rev") == 0)     { _config.currentReverse = atof(value); return true; }
     if (strcmp(key, "curr_hyst") == 0)    { _config.currentHysteresis = atof(value); return true; }
+
+    // WiFi / OTA (string)
+    if (strcmp(key, "wifi_ssid") == 0)    { strncpy(_config.wifiSsid, value, sizeof(_config.wifiSsid) - 1); _config.wifiSsid[sizeof(_config.wifiSsid) - 1] = '\0'; return true; }
+    if (strcmp(key, "wifi_pass") == 0)    { strncpy(_config.wifiPassword, value, sizeof(_config.wifiPassword) - 1); _config.wifiPassword[sizeof(_config.wifiPassword) - 1] = '\0'; return true; }
+    if (strcmp(key, "ota_host") == 0)     { strncpy(_config.otaHostname, value, sizeof(_config.otaHostname) - 1); _config.otaHostname[sizeof(_config.otaHostname) - 1] = '\0'; return true; }
 
     return false;
 }

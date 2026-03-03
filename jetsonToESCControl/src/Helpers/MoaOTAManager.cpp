@@ -6,23 +6,20 @@
  */
 
 #include "MoaOTAManager.h"
+#include "ConfigManager.h"
 
 static const char* TAG = "OTAManager";
 
-MoaOTAManager::MoaOTAManager(const char* apSsid, const char* apPassword,
-                             const char* hostname)
-    : _apSsid(apSsid)
-    , _apPassword(apPassword)
-    , _hostname(hostname)
-    , _apActive(false)
+MoaOTAManager::MoaOTAManager(ConfigManager& config)
+    : _config(config)
     , _updating(false)
     , _active(false) {}
 
 bool MoaOTAManager::begin() {
-    ESP_LOGI(TAG, "Initializing WiFi AP + OTA...");
+    ESP_LOGI(TAG, "Initializing WiFi STA + OTA...");
 
-    if (!startAP()) {
-        ESP_LOGE(TAG, "Failed to start WiFi AP");
+    if (!connectWiFi()) {
+        ESP_LOGE(TAG, "Failed to connect to WiFi");
         return false;
     }
 
@@ -44,37 +41,55 @@ void MoaOTAManager::handle() {
 void MoaOTAManager::stop() {
     if (_active) {
         ArduinoOTA.end();
-        //WiFi.softAPdisconnect(true);
+        WiFi.disconnect(true);
         WiFi.mode(WIFI_OFF);
         _active = false;
-        _apActive = false;
-        ESP_LOGI(TAG, "WiFi AP stopped");
+        ESP_LOGI(TAG, "WiFi disconnected, OTA stopped");
     }
 }
 
-bool MoaOTAManager::startAP() {
-    // Use AP mode only — don't touch STA so it won't interfere with anything
+bool MoaOTAManager::connectWiFi() {
+    WiFi.mode(WIFI_STA);
     WiFi.setTxPower(WIFI_POWER_8_5dBm);
-    WiFi.mode(WIFI_AP);
-    bool result;
-    if (_apPassword)
-        result = WiFi.begin(_apSsid, _apPassword);
-    if (!result) {
-        ESP_LOGE(TAG, "WiFi.begin() failed");
+
+    const char* ssid = _config.wifiSsid;
+    const char* pass = _config.wifiPassword;
+
+    if (ssid[0] == '\0') {
+        ESP_LOGE(TAG, "WiFi SSID is empty — set via CLI: set wifi_ssid <ssid>");
         return false;
     }
 
-    _apActive = true;
-    ESP_LOGI(TAG, "AP started: SSID=%s  IP=%s",
-             _apSsid, WiFi.localIP().toString().c_str());
+    ESP_LOGI(TAG, "Connecting to WiFi SSID: %s", ssid);
+
+    if (pass[0] != '\0') {
+        WiFi.begin(ssid, pass);
+    } else {
+        WiFi.begin(ssid);
+    }
+
+    uint32_t startMs = millis();
+    while (WiFi.status() != WL_CONNECTED) {
+        if ((millis() - startMs) >= OTA_WIFI_CONNECT_TIMEOUT_MS) {
+            ESP_LOGE(TAG, "WiFi connection timed out after %ums", OTA_WIFI_CONNECT_TIMEOUT_MS);
+            WiFi.disconnect(true);
+            WiFi.mode(WIFI_OFF);
+            return false;
+        }
+        vTaskDelay(pdMS_TO_TICKS(250));
+    }
+
+    ESP_LOGI(TAG, "WiFi connected: SSID=%s  IP=%s  RSSI=%d",
+             ssid, WiFi.localIP().toString().c_str(), WiFi.RSSI());
 
     return true;
 }
 
 void MoaOTAManager::setupOTA() {
-    if (_hostname) {
-        ArduinoOTA.setHostname(_hostname);
-        ESP_LOGI(TAG, "OTA hostname: %s", _hostname);
+    const char* hostname = _config.otaHostname;
+    if (hostname[0] != '\0') {
+        ArduinoOTA.setHostname(hostname);
+        ESP_LOGI(TAG, "OTA hostname: %s", hostname);
     }
 
     ArduinoOTA.onStart([this]() {

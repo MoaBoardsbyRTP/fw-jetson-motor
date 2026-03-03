@@ -1,11 +1,13 @@
 /**
  * @file MoaOTAManager.h
- * @brief WiFi AP + ArduinoOTA manager for wireless firmware updates
+ * @brief WiFi STA + ArduinoOTA manager for wireless firmware updates
  * @author Oscar Martinez
  * @date 2026-02-27
  * 
- * Starts a WiFi Soft AP and enables ArduinoOTA so the board can be
- * flashed wirelessly. Designed to run in its own FreeRTOS task.
+ * Connects to an existing WiFi router (STA mode) and enables ArduinoOTA
+ * so the board can be flashed wirelessly. WiFi credentials are read from
+ * ConfigManager (NVS-backed, CLI-configurable).
+ * Designed to run in its own FreeRTOS task.
  */
 
 #pragma once
@@ -15,16 +17,23 @@
 #include <ArduinoOTA.h>
 #include "esp_log.h"
 
+class ConfigManager;
+
 /**
- * @brief Manages WiFi AP mode and ArduinoOTA
+ * @brief WiFi connection timeout in milliseconds
+ */
+#define OTA_WIFI_CONNECT_TIMEOUT_MS 15000
+
+/**
+ * @brief Manages WiFi STA connection and ArduinoOTA
  * 
- * Creates a Soft AP with configurable SSID/password so a developer
- * can connect and push firmware updates over the air.
+ * Connects to a router using credentials from ConfigManager and enables
+ * ArduinoOTA for wireless firmware updates.
  * 
  * ## Usage
  * @code
- * MoaOTAManager ota("MoaESC", "moa12345");
- * ota.begin();
+ * MoaOTAManager ota(config);
+ * ota.begin();   // connects to WiFi + starts OTA
  * // In a task loop:
  * ota.handle();
  * @endcode
@@ -33,17 +42,14 @@ class MoaOTAManager {
 public:
     /**
      * @brief Construct OTA manager
-     * @param apSsid     Soft AP SSID
-     * @param apPassword Soft AP password (min 8 chars, nullptr for open)
-     * @param hostname   mDNS hostname for OTA discovery
+     * @param config Reference to ConfigManager for WiFi credentials
      */
-    MoaOTAManager(const char* apSsid, const char* apPassword = nullptr,
-                  const char* hostname = nullptr);
+    explicit MoaOTAManager(ConfigManager& config);
     ~MoaOTAManager() = default;
 
     /**
-     * @brief Start WiFi AP and ArduinoOTA
-     * @return true if both initialized successfully
+     * @brief Connect to WiFi and start ArduinoOTA
+     * @return true if WiFi connected and OTA initialized
      */
     bool begin();
 
@@ -58,28 +64,25 @@ public:
     bool isUpdating() const { return _updating; }
 
     /**
-     * @brief Check if WiFi AP is active
+     * @brief Check if WiFi is connected
      */
-    bool isApActive() const { return _apActive; }
+    bool isConnected() const { return WiFi.status() == WL_CONNECTED; }
 
     /**
-     * @brief Tear down WiFi AP and stop ArduinoOTA
+     * @brief Disconnect WiFi and stop ArduinoOTA
      */
     void stop();
 
     /**
-     * @brief Check if OTA manager is active (AP running)
+     * @brief Check if OTA manager is active (WiFi connected + OTA running)
      */
     bool isActive() const { return _active; }
 
 private:
-    const char* _apSsid;
-    const char* _apPassword;
-    const char* _hostname;
-    bool _apActive;
+    ConfigManager& _config;
     bool _updating;
     bool _active;
 
-    bool startAP();
+    bool connectWiFi();
     void setupOTA();
 };

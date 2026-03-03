@@ -49,6 +49,14 @@ void ConfigManager::loadDefaults() {
     currentOvercurrent = CURRENT_THRESHOLD_OVERCURRENT;
     currentReverse     = CURRENT_THRESHOLD_REVERSE;
     currentHysteresis  = CURRENT_HYSTERESIS;
+
+    // WiFi / OTA
+    strncpy(wifiSsid, OTA_AP_SSID, sizeof(wifiSsid) - 1);
+    wifiSsid[sizeof(wifiSsid) - 1] = '\0';
+    strncpy(wifiPassword, OTA_AP_PASSWORD, sizeof(wifiPassword) - 1);
+    wifiPassword[sizeof(wifiPassword) - 1] = '\0';
+    strncpy(otaHostname, OTA_HOSTNAME, sizeof(otaHostname) - 1);
+    otaHostname[sizeof(otaHostname) - 1] = '\0';
 }
 
 void ConfigManager::begin() {
@@ -88,12 +96,24 @@ void ConfigManager::begin() {
     currentReverse     = prefs.getFloat("curr_rev",  CURRENT_THRESHOLD_REVERSE);
     currentHysteresis  = prefs.getFloat("curr_hyst", CURRENT_HYSTERESIS);
 
+    // WiFi / OTA
+    String ssid = prefs.getString("wifi_ssid", OTA_AP_SSID);
+    String pass = prefs.getString("wifi_pass", OTA_AP_PASSWORD);
+    String host = prefs.getString("ota_host",  OTA_HOSTNAME);
+    strncpy(wifiSsid, ssid.c_str(), sizeof(wifiSsid) - 1);
+    wifiSsid[sizeof(wifiSsid) - 1] = '\0';
+    strncpy(wifiPassword, pass.c_str(), sizeof(wifiPassword) - 1);
+    wifiPassword[sizeof(wifiPassword) - 1] = '\0';
+    strncpy(otaHostname, host.c_str(), sizeof(otaHostname) - 1);
+    otaHostname[sizeof(otaHostname) - 1] = '\0';
+
     prefs.end();
 
     ESP_LOGI(TAG, "Settings loaded from NVS");
     ESP_LOGD(TAG, "  Batt: high=%.2fV, med=%.2fV, low=%.2fV, stop=%.2fV, hyst=%.2fV", battHigh, battMedium, battLow, battStop, battHysteresis);
     ESP_LOGD(TAG, "  Temp: target=%.1fC, hyst=%.1fC", tempTarget, tempHysteresis);
     ESP_LOGD(TAG, "  Current: OC=%.1fA, rev=%.1fA, hyst=%.1fA", currentOvercurrent, currentReverse, currentHysteresis);
+    ESP_LOGD(TAG, "  WiFi: SSID=%s, host=%s", wifiSsid, otaHostname);
     ESP_LOGD(TAG, "  ESC: eco=%u, paddle=%u, break=%u, full=%u, ramp=%.1f%%/s",
              escEcoMode, escPaddleMode, escBreakingMode, escFullThrottle, escRampRate);
     ESP_LOGD(TAG, "  Timers: t25=%lums, t50=%lums, t75=%lums, t100=%lums, t75from100=%lums",
@@ -139,6 +159,11 @@ bool ConfigManager::save() {
     ok &= (prefs.putFloat("curr_rev",    currentReverse)     > 0);
     ok &= (prefs.putFloat("curr_hyst",   currentHysteresis)  > 0);
 
+    // WiFi / OTA
+    ok &= (prefs.putString("wifi_ssid",  wifiSsid)    > 0);
+    ok &= (prefs.putString("wifi_pass",  wifiPassword) > 0);
+    ok &= (prefs.putString("ota_host",   otaHostname)  > 0);
+
     prefs.end();
 
     if (ok) {
@@ -180,6 +205,7 @@ void ConfigManager::applyTo(MoaBattControl& batt, MoaCurrentControl& current,
 
     ESP_LOGI(TAG, "Configuration applied to devices");
     ESP_LOGD(TAG, "  Batt: high=%.2fV, med=%.2fV, low=%.2fV, stop=%.2fV, hyst=%.2fV", battHigh, battMedium, battLow, battStop, battHysteresis);
+    ESP_LOGD(TAG, "  WiFi: SSID=%s, host=%s", wifiSsid, otaHostname);
     ESP_LOGD(TAG, "  Current: OC=%.1fA, rev=%.1fA, hyst=%.1fA", currentOvercurrent, currentReverse, currentHysteresis);
     ESP_LOGD(TAG, "  Temp: target=%.1fC, hyst=%.1fC", tempTarget, tempHysteresis);
     ESP_LOGD(TAG, "  ESC ramp: %.1f%%/s", escRampRate);
