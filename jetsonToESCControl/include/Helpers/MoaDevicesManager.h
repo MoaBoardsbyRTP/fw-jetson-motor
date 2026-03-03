@@ -174,12 +174,12 @@ public:
     // === OTA Control ===
 
     /**
-     * @brief Start WiFi AP and OTA (enter config state)
+     * @brief Connect WiFi STA and start OTA (enter config state)
      */
     void startOTA();
 
     /**
-     * @brief Stop WiFi AP and OTA (exit config state)
+     * @brief Stop OTA and disconnect WiFi STA (exit config state)
      */
     void stopOTA();
 
@@ -265,4 +265,11 @@ private:
     bool _lastOverheat;
     bool _lastOvercurrent;
     bool _boardLocked;
+
+    TaskHandle_t _wifiConnectAnimTask;
+    volatile bool _wifiConnectAnimating;
+
+    static void wifiConnectAnimTaskEntry(void* pvParameters);
+    void startWiFiConnectAnimation();
+    void stopWiFiConnectAnimation();
 };

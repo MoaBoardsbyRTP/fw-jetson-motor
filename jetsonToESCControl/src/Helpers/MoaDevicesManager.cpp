@@ -23,6 +23,8 @@ MoaDevicesManager::MoaDevicesManager(MoaLedControl& leds, ESCController& esc, Mo
     , _lastOverheat(false)
     , _lastOvercurrent(false)
     , _boardLocked(true)
+    , _wifiConnectAnimTask(nullptr)
+    , _wifiConnectAnimating(false)
 {
     memset(_timers, 0, sizeof(_timers));
 }
@@ -182,18 +184,23 @@ void MoaDevicesManager::exitConfigMode() {
 }
 
 void MoaDevicesManager::startOTA() {
-    ESP_LOGI(TAG, "Starting WiFi + OTA");
-    // Start WiFi first, then OTA
-    if (_wifiManager.start()) {
+    ESP_LOGI(TAG, "Starting WiFi STA + OTA");
+
+    startWiFiConnectAnimation();
+    bool wifiOk = _wifiManager.start();
+    stopWiFiConnectAnimation();
+
+    if (wifiOk) {
+        ESP_LOGI(TAG, "WiFi connected at %s; starting OTA", _wifiManager.getIP().toString().c_str());
         _otaManager.begin();
     } else {
-        ESP_LOGE(TAG, "Failed to start WiFi");
+        ESP_LOGE(TAG, "Failed to connect WiFi STA");
     }
 }
 
 void MoaDevicesManager::stopOTA() {
     ESP_LOGI(TAG, "Stopping WiFi + OTA");
-    // Stop OTA first, then WiFi
+    stopWiFiConnectAnimation();
     _otaManager.stop();
     _wifiManager.stop();
 }
@@ -252,4 +259,46 @@ void MoaDevicesManager::logError(uint8_t code, int16_t value) {
 
 void MoaDevicesManager::updateLog() {
     _log.update();
+}
+
+void MoaDevicesManager::wifiConnectAnimTaskEntry(void* pvParameters) {
+    auto* self = static_cast<MoaDevicesManager*>(pvParameters);
+    while (self->_wifiConnectAnimating) {
+        self->_leds.waveAllLeds(false);
+        vTaskDelay(pdMS_TO_TICKS(800));
+    }
+    vTaskDelete(nullptr);
+}
+
+void MoaDevicesManager::startWiFiConnectAnimation() {
+    if (_wifiConnectAnimating) {
+        return;
+    }
+
+    _wifiConnectAnimating = true;
+    BaseType_t ok = xTaskCreatePinnedToCore(
+        wifiConnectAnimTaskEntry,
+        "WiFiConnAnim",
+        2048,
+        this,
+        1,
+        &_wifiConnectAnimTask,
+        0
+    );
+
+    if (ok != pdPASS) {
+        _wifiConnectAnimating = false;
+        _wifiConnectAnimTask = nullptr;
+        ESP_LOGW(TAG, "Could not start WiFi connect animation task");
+    }
+}
+
+void MoaDevicesManager::stopWiFiConnectAnimation() {
+    if (!_wifiConnectAnimating) {
+        return;
+    }
+
+    _wifiConnectAnimating = false;
+    vTaskDelay(pdMS_TO_TICKS(20));
+    _wifiConnectAnimTask = nullptr;
 }
