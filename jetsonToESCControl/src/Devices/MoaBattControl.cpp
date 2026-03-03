@@ -19,6 +19,7 @@ MoaBattControl::MoaBattControl(QueueHandle_t eventQueue, uint8_t adcPin,
     , _dividerRatio(1.0f)
     , _referenceVoltage(3.3f)
     , _lowThreshold(3.3f)
+    , _stopThreshold(3.0f)
     , _highThreshold(4.0f)
     , _hysteresis(0.1f)
     , _rawAdc(0)
@@ -30,6 +31,10 @@ MoaBattControl::MoaBattControl(QueueHandle_t eventQueue, uint8_t adcPin,
     , _sampleCount(0)
     , _averagedVoltage(0.0f)
     , _updateCount(0)
+    , _lowConfirmMs(MOA_BATT_LOW_CONFIRM_MS)
+    , _stopConfirmMs(MOA_BATT_STOP_CONFIRM_MS)
+    , _belowLowSinceMs(UINT32_MAX)
+    , _belowStopSinceMs(UINT32_MAX)
 {
     setNumSamples(numSamples);
 }
@@ -56,10 +61,13 @@ void MoaBattControl::update() {
     
     // Periodic log (1 in 100 readings, ~5s at 50ms task period)
     if (++_updateCount % 100 == 0) {
+        const char* levelStr =
+            (_level == MoaBattLevel::BATT_STOP) ? "STOP" :
+            (_level == MoaBattLevel::BATT_LOW) ? "LOW" :
+            (_level == MoaBattLevel::BATT_MEDIUM) ? "MED" : "HIGH";
         ESP_LOGI(TAG, "V=%.3fV avg=%.3fV raw=%d level=%s",
                  _currentVoltage, _averagedVoltage, _rawAdc,
-                 _level == MoaBattLevel::BATT_LOW ? "LOW" :
-                 _level == MoaBattLevel::BATT_MEDIUM ? "MED" : "HIGH");
+                 levelStr);
     }
     
     // Push stats reading to telemetry queue
@@ -71,29 +79,51 @@ void MoaBattControl::update() {
     }
     
     // Calculate thresholds with hysteresis based on current state
+    float stopThreshUp = _stopThreshold + _hysteresis;
+    float stopThreshDown = _stopThreshold;
     float lowThreshUp = _lowThreshold + _hysteresis;
     float lowThreshDown = _lowThreshold;
     float highThreshUp = _highThreshold;
     float highThreshDown = _highThreshold - _hysteresis;
+    uint32_t nowMs = millis();
     
     // Check for state transitions and push events
     MoaBattLevel previousLevel = _level;
     
     switch (_level) {
-        case MoaBattLevel::BATT_LOW:
-            // From LOW, can only go to MEDIUM (crossing up above low threshold)
-            if (_averagedVoltage >= lowThreshUp) {
-                _level = MoaBattLevel::BATT_MEDIUM;
+        case MoaBattLevel::BATT_STOP:
+            // From STOP, can only go to LOW (crossing up above stop threshold)
+            if (_averagedVoltage >= stopThreshUp) {
+                _level = MoaBattLevel::BATT_LOW;
             }
+            _belowStopSinceMs = UINT32_MAX;
+            _belowLowSinceMs = UINT32_MAX;
+            break;
+
+        case MoaBattLevel::BATT_LOW:
+            // From LOW, can go to STOP or MEDIUM
+            if (isBelowThresholdForDuration(_averagedVoltage, stopThreshDown,
+                                            _stopConfirmMs, nowMs,
+                                            _belowStopSinceMs)) {
+                _level = MoaBattLevel::BATT_STOP;
+            } else if (_averagedVoltage >= lowThreshUp) {
+                _level = MoaBattLevel::BATT_MEDIUM;
+                _belowStopSinceMs = UINT32_MAX;
+            }
+            _belowLowSinceMs = UINT32_MAX;
             break;
             
         case MoaBattLevel::BATT_MEDIUM:
             // From MEDIUM, can go to LOW or HIGH
-            if (_averagedVoltage <= lowThreshDown) {
+            if (isBelowThresholdForDuration(_averagedVoltage, lowThreshDown,
+                                            _lowConfirmMs, nowMs,
+                                            _belowLowSinceMs)) {
                 _level = MoaBattLevel::BATT_LOW;
             } else if (_averagedVoltage >= highThreshUp) {
                 _level = MoaBattLevel::BATT_HIGH;
+                _belowLowSinceMs = UINT32_MAX;
             }
+            _belowStopSinceMs = UINT32_MAX;
             break;
             
         case MoaBattLevel::BATT_HIGH:
@@ -101,12 +131,18 @@ void MoaBattControl::update() {
             if (_averagedVoltage <= highThreshDown) {
                 _level = MoaBattLevel::BATT_MEDIUM;
             }
+            _belowStopSinceMs = UINT32_MAX;
+            _belowLowSinceMs = UINT32_MAX;
             break;
     }
     
     // Push event if level changed
     if (_level != previousLevel) {
         switch (_level) {
+            case MoaBattLevel::BATT_STOP:
+                ESP_LOGW(TAG, "Level -> STOP (avg=%.3fV, threshold=%.3fV)", _averagedVoltage, _stopThreshold);
+                pushBattEvent(COMMAND_BATT_LEVEL_STOP);
+                break;
             case MoaBattLevel::BATT_LOW:
                 ESP_LOGW(TAG, "Level -> LOW (avg=%.3fV, threshold=%.3fV)", _averagedVoltage, _lowThreshold);
                 pushBattEvent(COMMAND_BATT_LEVEL_LOW);
@@ -121,6 +157,22 @@ void MoaBattControl::update() {
                 break;
         }
     }
+}
+
+bool MoaBattControl::isBelowThresholdForDuration(float voltage, float threshold,
+                                                 uint32_t confirmMs, uint32_t nowMs,
+                                                 uint32_t& sinceMs) {
+    if (voltage > threshold) {
+        sinceMs = UINT32_MAX;
+        return false;
+    }
+
+    if (sinceMs == UINT32_MAX) {
+        sinceMs = nowMs;
+        return confirmMs == 0;
+    }
+
+    return (nowMs - sinceMs) >= confirmMs;
 }
 
 void MoaBattControl::setDividerRatio(float ratio) {
@@ -145,6 +197,14 @@ void MoaBattControl::setLowThreshold(float voltage) {
 
 float MoaBattControl::getLowThreshold() const {
     return _lowThreshold;
+}
+
+void MoaBattControl::setStopThreshold(float voltage) {
+    _stopThreshold = voltage;
+}
+
+float MoaBattControl::getStopThreshold() const {
+    return _stopThreshold;
 }
 
 void MoaBattControl::setHighThreshold(float voltage) {

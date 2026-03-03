@@ -33,6 +33,7 @@
 #define COMMAND_BATT_LEVEL_HIGH   1
 #define COMMAND_BATT_LEVEL_MEDIUM 2
 #define COMMAND_BATT_LEVEL_LOW    3
+#define COMMAND_BATT_LEVEL_STOP   4
 
 // =============================================================================
 // Current Command Types (commandType field)

@@ -38,6 +38,7 @@ void ConfigManager::loadDefaults() {
     battHigh        = BATT_THRESHOLD_HIGH;
     battMedium      = BATT_THRESHOLD_MEDIUM;
     battLow         = BATT_THRESHOLD_LOW;
+    battStop        = BATT_THRESHOLD_STOP;
     battHysteresis  = BATT_HYSTERESIS;
 
     // Temperature
@@ -75,6 +76,7 @@ void ConfigManager::begin() {
     battHigh         = prefs.getFloat("batt_high",   BATT_THRESHOLD_HIGH);
     battMedium       = prefs.getFloat("batt_med",    BATT_THRESHOLD_MEDIUM);
     battLow          = prefs.getFloat("batt_low",    BATT_THRESHOLD_LOW);
+    battStop         = prefs.getFloat("batt_stop",   BATT_THRESHOLD_STOP);
     battHysteresis   = prefs.getFloat("batt_hyst",   BATT_HYSTERESIS);
 
     // Temperature
@@ -89,7 +91,7 @@ void ConfigManager::begin() {
     prefs.end();
 
     ESP_LOGI(TAG, "Settings loaded from NVS");
-    ESP_LOGD(TAG, "  Batt: high=%.2fV, med=%.2fV, low=%.2fV, hyst=%.2fV", battHigh, battMedium, battLow, battHysteresis);
+    ESP_LOGD(TAG, "  Batt: high=%.2fV, med=%.2fV, low=%.2fV, stop=%.2fV, hyst=%.2fV", battHigh, battMedium, battLow, battStop, battHysteresis);
     ESP_LOGD(TAG, "  Temp: target=%.1fC, hyst=%.1fC", tempTarget, tempHysteresis);
     ESP_LOGD(TAG, "  Current: OC=%.1fA, rev=%.1fA, hyst=%.1fA", currentOvercurrent, currentReverse, currentHysteresis);
     ESP_LOGD(TAG, "  ESC: eco=%u, paddle=%u, break=%u, full=%u, ramp=%.1f%%/s",
@@ -125,6 +127,7 @@ bool ConfigManager::save() {
     ok &= (prefs.putFloat("batt_high",   battHigh)         > 0);
     ok &= (prefs.putFloat("batt_med",    battMedium)       > 0);
     ok &= (prefs.putFloat("batt_low",    battLow)          > 0);
+    ok &= (prefs.putFloat("batt_stop",   battStop)         > 0);
     ok &= (prefs.putFloat("batt_hyst",   battHysteresis)   > 0);
 
     // Temperature
@@ -158,6 +161,7 @@ void ConfigManager::applyTo(MoaBattControl& batt, MoaCurrentControl& current,
     batt.setDividerRatio(BATT_DIVIDER_RATIO);
     batt.setHighThreshold(battHigh);
     batt.setLowThreshold(battLow);
+    batt.setStopThreshold(battStop);
     batt.setHysteresis(battHysteresis);
 
     // Current sensor configuration
@@ -175,7 +179,7 @@ void ConfigManager::applyTo(MoaBattControl& batt, MoaCurrentControl& current,
     esc.setRampRate(escRampRate);
 
     ESP_LOGI(TAG, "Configuration applied to devices");
-    ESP_LOGD(TAG, "  Batt: high=%.2fV, med=%.2fV, low=%.2fV, hyst=%.2fV", battHigh, battMedium, battLow, battHysteresis);
+    ESP_LOGD(TAG, "  Batt: high=%.2fV, med=%.2fV, low=%.2fV, stop=%.2fV, hyst=%.2fV", battHigh, battMedium, battLow, battStop, battHysteresis);
     ESP_LOGD(TAG, "  Current: OC=%.1fA, rev=%.1fA, hyst=%.1fA", currentOvercurrent, currentReverse, currentHysteresis);
     ESP_LOGD(TAG, "  Temp: target=%.1fC, hyst=%.1fC", tempTarget, tempHysteresis);
     ESP_LOGD(TAG, "  ESC ramp: %.1f%%/s", escRampRate);
