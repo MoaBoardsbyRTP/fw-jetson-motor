@@ -70,13 +70,14 @@ public:
     uint32_t escTime50;
     uint32_t escTime75;
     uint32_t escTime100;
-    uint32_t escTime75From100;
+    uint32_t escTimeAfterFullThrottle;
 
     // === Throttle Duty Cycles (10-bit, 0-1023) ===
     uint16_t escEcoMode;
     uint16_t escPaddleMode;
     uint16_t escBreakingMode;
     uint16_t escFullThrottle;
+    uint16_t escAfterFullThrottle;
     float escRampRate;
 
     // === Battery Thresholds (V) ===

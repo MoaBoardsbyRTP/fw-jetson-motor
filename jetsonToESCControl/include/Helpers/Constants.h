@@ -248,7 +248,7 @@
 /**
  * @brief Time at 75% throttle after stepping down from 100% (ms)
  */
-#define ESC_75_TIME_100       30000
+#define ESC_TIME_AFTER_FULL   30000
 
 /**
  * @brief Duty cycle for ECO_MODE (10-bit, servo range ~51-102)
@@ -264,6 +264,11 @@
  * @brief Duty cycle for BREAKING_ZONE_MODE (10-bit, servo range ~51-102)
  */
 #define ESC_BREAKING_MODE     87
+
+/**
+ * @brief Duty cycle used after full throttle timeout (10-bit)
+ */
+#define ESC_AFTER_FULL_THROTTLE_MODE   87
 
 /**
  * @brief Duty cycle for FULL_THROTTLE_MODE (10-bit, servo range ~51-102)

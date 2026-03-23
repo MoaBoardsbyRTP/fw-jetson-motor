@@ -80,8 +80,8 @@ void MoaDevicesManager::disengageThrottle() {
 }
 
 void MoaDevicesManager::handleThrottleStepDown() {
-    setThrottleLevel(_config.escBreakingMode);
-    startTimer(TIMER_ID_THROTTLE, _config.escTime75From100);
+    setThrottleLevel(_config.escAfterFullThrottle);
+    startTimer(TIMER_ID_THROTTLE, _config.escTimeAfterFullThrottle);
 }
 
 // === Timer Management ===

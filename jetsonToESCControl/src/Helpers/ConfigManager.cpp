@@ -25,13 +25,14 @@ void ConfigManager::loadDefaults() {
     escTime50       = ESC_50_TIME;
     escTime75       = ESC_75_TIME;
     escTime100      = ESC_100_TIME;
-    escTime75From100 = ESC_75_TIME_100;
+    escTimeAfterFullThrottle = ESC_TIME_AFTER_FULL;
 
     // Throttle duty cycles
     escEcoMode      = ESC_ECO_MODE;
     escPaddleMode   = ESC_PADDLE_MODE;
     escBreakingMode = ESC_BREAKING_MODE;
     escFullThrottle = ESC_FULL_THROTTLE_MODE;
+    escAfterFullThrottle = ESC_AFTER_FULL_THROTTLE_MODE;
     escRampRate     = ESC_RAMP_RATE;
 
     // Battery
@@ -71,13 +72,14 @@ void ConfigManager::begin() {
     escTime50        = prefs.getULong("esc_t50",     ESC_50_TIME);
     escTime75        = prefs.getULong("esc_t75",     ESC_75_TIME);
     escTime100       = prefs.getULong("esc_t100",    ESC_100_TIME);
-    escTime75From100 = prefs.getULong("esc_t75_100", ESC_75_TIME_100);
+    escTimeAfterFullThrottle = prefs.getULong("esc_t_after_full", prefs.getULong("esc_t75_100", ESC_TIME_AFTER_FULL));
 
     // Throttle duty cycles
     escEcoMode       = prefs.getUShort("esc_eco",     ESC_ECO_MODE);
     escPaddleMode    = prefs.getUShort("esc_paddle",  ESC_PADDLE_MODE);
     escBreakingMode  = prefs.getUShort("esc_break",   ESC_BREAKING_MODE);
     escFullThrottle  = prefs.getUShort("esc_full",    ESC_FULL_THROTTLE_MODE);
+    escAfterFullThrottle = prefs.getUShort("esc_after_full", ESC_AFTER_FULL_THROTTLE_MODE);
     escRampRate      = prefs.getFloat("esc_ramp",    ESC_RAMP_RATE);
 
     // Battery
@@ -114,10 +116,10 @@ void ConfigManager::begin() {
     ESP_LOGD(TAG, "  Temp: target=%.1fC, hyst=%.1fC", tempTarget, tempHysteresis);
     ESP_LOGD(TAG, "  Current: OC=%.1fA, rev=%.1fA, hyst=%.1fA", currentOvercurrent, currentReverse, currentHysteresis);
     ESP_LOGD(TAG, "  WiFi: SSID=%s, host=%s", wifiSsid, otaHostname);
-    ESP_LOGD(TAG, "  ESC: eco=%u, paddle=%u, break=%u, full=%u, ramp=%.1f%%/s",
-             escEcoMode, escPaddleMode, escBreakingMode, escFullThrottle, escRampRate);
-    ESP_LOGD(TAG, "  Timers: t25=%lums, t50=%lums, t75=%lums, t100=%lums, t75from100=%lums",
-             escTime25, escTime50, escTime75, escTime100, escTime75From100);
+    ESP_LOGD(TAG, "  ESC: eco=%u, paddle=%u, break=%u, full=%u, after_full=%u, ramp=%.1f%%/s",
+             escEcoMode, escPaddleMode, escBreakingMode, escFullThrottle, escAfterFullThrottle, escRampRate);
+    ESP_LOGD(TAG, "  Timers: t25=%lums, t50=%lums, t75=%lums, t100=%lums, t_after_full=%lums",
+             escTime25, escTime50, escTime75, escTime100, escTimeAfterFullThrottle);
 }
 
 bool ConfigManager::save() {
@@ -134,13 +136,14 @@ bool ConfigManager::save() {
     ok &= (prefs.putULong("esc_t50",     escTime50)        > 0);
     ok &= (prefs.putULong("esc_t75",     escTime75)        > 0);
     ok &= (prefs.putULong("esc_t100",    escTime100)       > 0);
-    ok &= (prefs.putULong("esc_t75_100", escTime75From100) > 0);
+    ok &= (prefs.putULong("esc_t_after_full", escTimeAfterFullThrottle) > 0);
 
     // Throttle duty cycles
     ok &= (prefs.putUShort("esc_eco",     escEcoMode)       > 0);
     ok &= (prefs.putUShort("esc_paddle",  escPaddleMode)    > 0);
     ok &= (prefs.putUShort("esc_break",   escBreakingMode)  > 0);
     ok &= (prefs.putUShort("esc_full",    escFullThrottle)  > 0);
+    ok &= (prefs.putUShort("esc_after_full", escAfterFullThrottle) > 0);
     ok &= (prefs.putFloat("esc_ramp",    escRampRate)      > 0);
 
     // Battery
