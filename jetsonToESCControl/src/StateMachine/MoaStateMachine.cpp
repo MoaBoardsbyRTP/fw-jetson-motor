@@ -6,6 +6,7 @@
 #include "OverHeatingState.h"
 #include "OverCurrentState.h"
 #include "BatteryLowState.h"
+#include "ConfigState.h"
 #include "esp_log.h"
 
 static const char* TAG = "StateMachine";
@@ -17,6 +18,7 @@ MoaStateMachine::MoaStateMachine(MoaDevicesManager& devices){
     _overHeatingState = new OverHeatingState(*this, devices);
     _overCurrentState = new OverCurrentState(*this, devices);
     _batteryLowState = new BatteryLowState(*this, devices);
+    _configState = new ConfigState(*this, devices);
     _state = _initState;
     ESP_LOGI(TAG, "State machine initialized, starting in InitState");
 }
@@ -48,7 +50,8 @@ void MoaStateMachine::setState(MoaState* state){
         (state == _surfingState) ? "Surfing" :
         (state == _overHeatingState) ? "OverHeating" :
         (state == _overCurrentState) ? "OverCurrent" :
-        (state == _batteryLowState) ? "BatteryLow" : "Unknown");
+        (state == _batteryLowState) ? "BatteryLow" :
+        (state == _configState) ? "Config" : "Unknown");
     _state = state;
     _state->onEnter();
 }
@@ -75,4 +78,8 @@ MoaState* MoaStateMachine::getOverCurrentState(){
 
 MoaState* MoaStateMachine::getBatteryLowState(){
     return _batteryLowState;
+}
+
+MoaState* MoaStateMachine::getConfigState(){
+    return _configState;
 }

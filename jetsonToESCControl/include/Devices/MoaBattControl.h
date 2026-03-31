@@ -29,10 +29,21 @@
 #define MOA_BATT_MAX_SAMPLES 32
 
 /**
+ * @brief Default confirmation time for medium->low transition (ms)
+ */
+#define MOA_BATT_LOW_CONFIRM_MS 300
+
+/**
+ * @brief Default confirmation time for low->stop transition (ms)
+ */
+#define MOA_BATT_STOP_CONFIRM_MS 500
+
+/**
  * @brief Battery level state enumeration
  */
 enum class MoaBattLevel {
-    BATT_LOW,     ///< Battery below low threshold (critical)
+    BATT_STOP,    ///< Battery below stop threshold (critical)
+    BATT_LOW,     ///< Battery below low threshold (warning)
     BATT_MEDIUM,  ///< Battery between low and high thresholds
     BATT_HIGH     ///< Battery above high threshold (fully charged)
 };
@@ -53,6 +64,7 @@ enum class MoaBattLevel {
  *       - COMMAND_BATT_LEVEL_HIGH: Entered HIGH zone (above high threshold)
  *       - COMMAND_BATT_LEVEL_MEDIUM: Entered MEDIUM zone (between thresholds)
  *       - COMMAND_BATT_LEVEL_LOW: Entered LOW zone (below low threshold)
+ *       - COMMAND_BATT_LEVEL_STOP: Entered STOP zone (below stop threshold)
  * 
  * ## Voltage Divider Configuration
  * For a voltage divider with R1 (top) and R2 (bottom):
@@ -161,6 +173,21 @@ public:
     float getLowThreshold() const;
 
     /**
+     * @brief Set the critical stop threshold voltage
+     *
+     * When battery voltage drops below this threshold, COMMAND_BATT_LEVEL_STOP is sent.
+     *
+     * @param voltage Stop threshold in volts (actual battery voltage, not divided)
+     */
+    void setStopThreshold(float voltage);
+
+    /**
+     * @brief Get the critical stop threshold
+     * @return float Stop threshold in volts
+     */
+    float getStopThreshold() const;
+
+    /**
      * @brief Set the high battery threshold voltage
      * 
      * When battery voltage rises above this threshold, COMMAND_BATT_LEVEL_HIGH is sent.
@@ -265,6 +292,7 @@ private:
     float _dividerRatio;               ///< Voltage divider ratio
     float _referenceVoltage;           ///< ADC reference voltage
     float _lowThreshold;               ///< Low battery threshold voltage
+    float _stopThreshold;              ///< Critical stop threshold voltage
     float _highThreshold;              ///< High battery threshold voltage
     float _hysteresis;                 ///< Hysteresis for threshold detection
     uint16_t _rawAdc;                  ///< Current raw ADC reading
@@ -277,6 +305,10 @@ private:
     uint8_t _sampleCount;              ///< Number of valid samples in buffer
     float _averagedVoltage;            ///< Cached averaged voltage
     uint32_t _updateCount;             ///< Counter for periodic logging
+    uint32_t _lowConfirmMs;            ///< Required time below low threshold before LOW event
+    uint32_t _stopConfirmMs;           ///< Required time below stop threshold before STOP event
+    uint32_t _belowLowSinceMs;         ///< Timestamp when voltage first went below low threshold
+    uint32_t _belowStopSinceMs;        ///< Timestamp when voltage first went below stop threshold
 
     /**
      * @brief Add a new sample to the circular buffer and update average
@@ -289,6 +321,19 @@ private:
      * @return float Averaged voltage
      */
     float calculateAverage() const;
+
+    /**
+     * @brief Validate that voltage has remained below threshold for a minimum duration
+     * @param voltage Current averaged voltage
+     * @param threshold Threshold to compare against
+     * @param confirmMs Required hold time in milliseconds
+     * @param nowMs Current timestamp from millis()
+     * @param sinceMs Timestamp state (updated by function)
+     * @return true if voltage has been below threshold for at least confirmMs
+     */
+    bool isBelowThresholdForDuration(float voltage, float threshold,
+                                     uint32_t confirmMs, uint32_t nowMs,
+                                     uint32_t& sinceMs);
 
     /**
      * @brief Convert raw ADC value to actual battery voltage

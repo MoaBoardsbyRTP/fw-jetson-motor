@@ -63,3 +63,12 @@ void StatsTask(void* pvParameters);
  * @param pvParameters Pointer to MoaMainUnit instance
  */
 void CliTask(void* pvParameters);
+
+/**
+ * @brief OTA task
+ * 
+ * Starts WiFi AP and handles ArduinoOTA requests.
+ * 
+ * @param pvParameters Pointer to MoaMainUnit instance
+ */
+void OtaTask(void* pvParameters);

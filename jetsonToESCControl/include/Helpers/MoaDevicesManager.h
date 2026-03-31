@@ -18,6 +18,8 @@
 #include "MoaTimer.h"
 #include "MoaBattControl.h"  // For MoaBattLevel enum
 #include "ConfigManager.h"
+#include "MoaWiFiManager.h"
+#include "MoaOTAManager.h"
 
 /**
  * @brief Output device facade
@@ -43,8 +45,12 @@ public:
      * @param leds Reference to LED controller
      * @param esc Reference to ESC controller
      * @param log Reference to flash logger
+     * @param config Reference to configuration manager
+     * @param wifiManager Reference to WiFi manager
+     * @param otaManager Reference to OTA manager
      */
-    MoaDevicesManager(MoaLedControl& leds, ESCController& esc, MoaFlashLog& log, ConfigManager& config);
+    MoaDevicesManager(MoaLedControl& leds, ESCController& esc, MoaFlashLog& log,
+                      ConfigManager& config, MoaWiFiManager& wifiManager, MoaOTAManager& otaManager);
 
     /**
      * @brief Destructor
@@ -165,6 +171,18 @@ public:
      */
     void exitConfigMode();
 
+    // === OTA Control ===
+
+    /**
+     * @brief Connect WiFi STA and start OTA (enter config state)
+     */
+    void startOTA();
+
+    /**
+     * @brief Stop OTA and disconnect WiFi STA (exit config state)
+     */
+    void stopOTA();
+
     /**
      * @brief Turn all LEDs off
      */
@@ -238,6 +256,8 @@ private:
     ESCController& _esc;
     MoaFlashLog& _log;
     ConfigManager& _config;
+    MoaWiFiManager& _wifiManager;
+    MoaOTAManager& _otaManager;
     QueueHandle_t _eventQueue;
     MoaTimer* _timers[MOA_TIMER_MAX_INSTANCES];
 
@@ -245,4 +265,11 @@ private:
     bool _lastOverheat;
     bool _lastOvercurrent;
     bool _boardLocked;
+
+    TaskHandle_t _wifiConnectAnimTask;
+    volatile bool _wifiConnectAnimating;
+
+    static void wifiConnectAnimTaskEntry(void* pvParameters);
+    void startWiFiConnectAnimation();
+    void stopWiFiConnectAnimation();
 };

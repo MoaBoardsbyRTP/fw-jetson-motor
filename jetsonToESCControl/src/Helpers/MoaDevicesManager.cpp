@@ -10,16 +10,21 @@
 
 static const char* TAG = "Devices";
 
-MoaDevicesManager::MoaDevicesManager(MoaLedControl& leds, ESCController& esc, MoaFlashLog& log, ConfigManager& config)
+MoaDevicesManager::MoaDevicesManager(MoaLedControl& leds, ESCController& esc, MoaFlashLog& log,
+                                     ConfigManager& config, MoaWiFiManager& wifiManager, MoaOTAManager& otaManager)
     : _leds(leds)
     , _esc(esc)
     , _log(log)
     , _config(config)
+    , _wifiManager(wifiManager)
+    , _otaManager(otaManager)
     , _eventQueue(nullptr)
     , _lastBattLevel(MoaBattLevel::BATT_HIGH)
     , _lastOverheat(false)
     , _lastOvercurrent(false)
     , _boardLocked(true)
+    , _wifiConnectAnimTask(nullptr)
+    , _wifiConnectAnimating(false)
 {
     memset(_timers, 0, sizeof(_timers));
 }
@@ -75,8 +80,8 @@ void MoaDevicesManager::disengageThrottle() {
 }
 
 void MoaDevicesManager::handleThrottleStepDown() {
-    setThrottleLevel(_config.escBreakingMode);
-    startTimer(TIMER_ID_THROTTLE, _config.escTime75From100);
+    setThrottleLevel(_config.escAfterFullThrottle);
+    startTimer(TIMER_ID_THROTTLE, _config.escTimeAfterFullThrottle);
 }
 
 // === Timer Management ===
@@ -98,20 +103,23 @@ bool MoaDevicesManager::startTimer(uint8_t timerId, uint32_t durationMs) {
     // Lazy-create the timer on first use
     if (_timers[timerId] == nullptr) {
         _timers[timerId] = new MoaTimer(_eventQueue, timerId);
-        ESP_LOGI(TAG, "Timer %d created", timerId);
     }
 
-    return _timers[timerId]->start(durationMs);
+    _timers[timerId]->start(durationMs);
+    return true;
 }
 
 bool MoaDevicesManager::stopTimer(uint8_t timerId) {
     if (timerId >= MOA_TIMER_MAX_INSTANCES) {
+        ESP_LOGW(TAG, "stopTimer: invalid timerId=%d", timerId);
         return false;
     }
     if (_timers[timerId] == nullptr) {
-        return true;  // Not created = not running
+        return true;  // Already stopped/non-existent
     }
-    return _timers[timerId]->stop();
+
+    _timers[timerId]->stop();
+    return true;
 }
 
 bool MoaDevicesManager::isTimerRunning(uint8_t timerId) const {
@@ -142,7 +150,6 @@ void MoaDevicesManager::indicateOvercurrent(bool active) {
     if (active) {
         _leds.startBlink(LED_INDEX_OVERCURRENT, LED_WARNING_BLINK_MS);
     } else {
-        // Restore locked/unlocked solid state
         _leds.stopBlink(LED_INDEX_OVERCURRENT, _boardLocked);
     }
 }
@@ -174,6 +181,28 @@ void MoaDevicesManager::enterConfigMode() {
 void MoaDevicesManager::exitConfigMode() {
     ESP_LOGI(TAG, "Exiting config mode");
     _leds.setConfigModeIndication(false);
+}
+
+void MoaDevicesManager::startOTA() {
+    ESP_LOGI(TAG, "Starting WiFi STA + OTA");
+
+    startWiFiConnectAnimation();
+    bool wifiOk = _wifiManager.start();
+    stopWiFiConnectAnimation();
+
+    if (wifiOk) {
+        ESP_LOGI(TAG, "WiFi connected at %s; starting OTA", _wifiManager.getIP().toString().c_str());
+        _otaManager.begin();
+    } else {
+        ESP_LOGE(TAG, "Failed to connect WiFi STA");
+    }
+}
+
+void MoaDevicesManager::stopOTA() {
+    ESP_LOGI(TAG, "Stopping WiFi + OTA");
+    stopWiFiConnectAnimation();
+    _otaManager.stop();
+    _wifiManager.stop();
 }
 
 void MoaDevicesManager::allLedsOff() {
@@ -230,4 +259,46 @@ void MoaDevicesManager::logError(uint8_t code, int16_t value) {
 
 void MoaDevicesManager::updateLog() {
     _log.update();
+}
+
+void MoaDevicesManager::wifiConnectAnimTaskEntry(void* pvParameters) {
+    auto* self = static_cast<MoaDevicesManager*>(pvParameters);
+    while (self->_wifiConnectAnimating) {
+        self->_leds.waveAllLeds(false);
+        vTaskDelay(pdMS_TO_TICKS(800));
+    }
+    vTaskDelete(nullptr);
+}
+
+void MoaDevicesManager::startWiFiConnectAnimation() {
+    if (_wifiConnectAnimating) {
+        return;
+    }
+
+    _wifiConnectAnimating = true;
+    BaseType_t ok = xTaskCreatePinnedToCore(
+        wifiConnectAnimTaskEntry,
+        "WiFiConnAnim",
+        2048,
+        this,
+        1,
+        &_wifiConnectAnimTask,
+        0
+    );
+
+    if (ok != pdPASS) {
+        _wifiConnectAnimating = false;
+        _wifiConnectAnimTask = nullptr;
+        ESP_LOGW(TAG, "Could not start WiFi connect animation task");
+    }
+}
+
+void MoaDevicesManager::stopWiFiConnectAnimation() {
+    if (!_wifiConnectAnimating) {
+        return;
+    }
+
+    _wifiConnectAnimating = false;
+    vTaskDelay(pdMS_TO_TICKS(20));
+    _wifiConnectAnimTask = nullptr;
 }

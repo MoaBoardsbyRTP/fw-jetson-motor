@@ -19,6 +19,7 @@ MoaMainUnit::MoaMainUnit()
     , _controlTaskHandle(nullptr)
     , _statsTaskHandle(nullptr)
     , _cliTaskHandle(nullptr)
+    , _otaTaskHandle(nullptr)
     , _mcpDevice(MCP23018_I2C_ADDR)
     , _tempControl(_eventQueue, PIN_TEMP_SENSE)
     , _battControl(_eventQueue, PIN_BATT_LEVEL_SENSE)
@@ -27,7 +28,9 @@ MoaMainUnit::MoaMainUnit()
     , _ledControl(_mcpDevice)
     , _flashLog()
     , _escController(PIN_ESC_PWM, 0, ESC_PWM_FREQUENCY)
-    , _devicesManager(_ledControl, _escController, _flashLog, _config)
+    , _wifiManager(_config.wifiSsid, _config.wifiPassword)
+    , _otaManager(_wifiManager, _config.otaHostname)
+    , _devicesManager(_ledControl, _escController, _flashLog, _config, _wifiManager, _otaManager)
     , _stateMachine(_devicesManager)
     , _uartCli(_config, _battControl, _currentControl, _tempControl, _escController)
 {
@@ -142,6 +145,10 @@ UartCli& MoaMainUnit::getUartCli() {
     return _uartCli;
 }
 
+MoaOTAManager& MoaMainUnit::getOTAManager() {
+    return _otaManager;
+}
+
 void MoaMainUnit::initI2C() {
     Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
     ESP_LOGI(TAG, "I2C initialized (SDA=%d, SCL=%d)", PIN_I2C_SDA, PIN_I2C_SCL);
@@ -190,6 +197,8 @@ void MoaMainUnit::initHardware() {
 void MoaMainUnit::applyConfiguration() {
     // Load settings from NVS (falls back to Constants.h defaults)
     _config.begin();
+    _wifiManager.setCredentials(_config.wifiSsid, _config.wifiPassword);
+    _otaManager.setHostname(_config.otaHostname);
 
     // Apply NVS-backed settings to sensor devices and ESC
     _config.applyTo(_battControl, _currentControl, _tempControl, _escController);
@@ -265,4 +274,16 @@ void MoaMainUnit::createTasks() {
         0
     );
     ESP_LOGI(TAG, "CliTask created (stack=%d, prio=%d)", TASK_STACK_CLI, TASK_PRIORITY_CLI);
+
+    // Create OtaTask
+    xTaskCreatePinnedToCore(
+        OtaTask,
+        "OtaTask",
+        TASK_STACK_OTA,
+        this,
+        TASK_PRIORITY_OTA,
+        &_otaTaskHandle,
+        0
+    );
+    ESP_LOGI(TAG, "OtaTask created (stack=%d, prio=%d)", TASK_STACK_OTA, TASK_PRIORITY_OTA);
 }

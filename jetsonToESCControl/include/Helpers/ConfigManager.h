@@ -70,19 +70,21 @@ public:
     uint32_t escTime50;
     uint32_t escTime75;
     uint32_t escTime100;
-    uint32_t escTime75From100;
+    uint32_t escTimeAfterFullThrottle;
 
     // === Throttle Duty Cycles (10-bit, 0-1023) ===
     uint16_t escEcoMode;
     uint16_t escPaddleMode;
     uint16_t escBreakingMode;
     uint16_t escFullThrottle;
+    uint16_t escAfterFullThrottle;
     float escRampRate;
 
     // === Battery Thresholds (V) ===
     float battHigh;
     float battMedium;
     float battLow;
+    float battStop;
     float battHysteresis;
 
     // === Temperature Thresholds (°C) ===
@@ -93,6 +95,11 @@ public:
     float currentOvercurrent;
     float currentReverse;
     float currentHysteresis;
+
+    // === WiFi / OTA ===
+    char wifiSsid[33];          ///< WiFi SSID (max 32 chars + null)
+    char wifiPassword[65];      ///< WiFi password (max 64 chars + null)
+    char otaHostname[33];       ///< mDNS hostname for OTA discovery
 
     // === Throttle helpers (use config values instead of Constants.h) ===
 

@@ -52,6 +52,11 @@
 #define BATT_THRESHOLD_LOW      19.5f
 
 /**
+ * @brief Battery stop threshold (V)
+ */
+#define BATT_THRESHOLD_STOP     18.9f
+
+/**
  * @brief Battery hysteresis (V)
  */
 #define BATT_HYSTERESIS         0.2f
@@ -243,7 +248,7 @@
 /**
  * @brief Time at 75% throttle after stepping down from 100% (ms)
  */
-#define ESC_75_TIME_100       30000
+#define ESC_TIME_AFTER_FULL   30000
 
 /**
  * @brief Duty cycle for ECO_MODE (10-bit, servo range ~51-102)
@@ -261,6 +266,30 @@
 #define ESC_BREAKING_MODE     87
 
 /**
+ * @brief Duty cycle used after full throttle timeout (10-bit)
+ */
+#define ESC_AFTER_FULL_THROTTLE_MODE   87
+
+/**
  * @brief Duty cycle for FULL_THROTTLE_MODE (10-bit, servo range ~51-102)
  */
 #define ESC_FULL_THROTTLE_MODE        102
+
+// =============================================================================
+// OTA Configuration
+// =============================================================================
+
+/**
+ * @brief WiFi Soft AP SSID for OTA updates
+ */
+#define OTA_AP_SSID         "CLOTENCSACOLLBATO"
+
+/**
+ * @brief WiFi Soft AP password (min 8 chars, or nullptr for open)
+ */
+#define OTA_AP_PASSWORD     "Xmp13051985!"
+
+/**
+ * @brief mDNS hostname for OTA discovery
+ */
+#define OTA_HOSTNAME        "MOA-ESC"

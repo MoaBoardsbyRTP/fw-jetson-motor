@@ -1,0 +1,1 @@
+deployment_id,deployment_timestamp_utc,device_id,board_serial_number,firmware_version,firmware_git_commit,client_name,client_site,flashed_by,config_sha256,config_snapshot_path,status,notes

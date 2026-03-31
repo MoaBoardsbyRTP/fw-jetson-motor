@@ -130,6 +130,7 @@ void MoaLedControl::setOvercurrentLed(bool state) {
 
 void MoaLedControl::setBatteryLevel(MoaBattLevel level) {
     ESP_LOGD(TAG, "Battery level display: %s",
+        (level == MoaBattLevel::BATT_STOP) ? "STOP" :
         (level == MoaBattLevel::BATT_LOW) ? "LOW" :
         (level == MoaBattLevel::BATT_MEDIUM) ? "MEDIUM" : "HIGH");
     // Stop any blinking on battery LEDs
@@ -139,6 +140,7 @@ void MoaLedControl::setBatteryLevel(MoaBattLevel level) {
     _ledState &= ~((1 << LED_INDEX_BATT_LOW) | (1 << LED_INDEX_BATT_MED) | (1 << LED_INDEX_BATT_HI));
     
     switch (level) {
+        case MoaBattLevel::BATT_STOP:
         case MoaBattLevel::BATT_LOW:
             // Only LOW LED on
             _ledState |= (1 << LED_INDEX_BATT_LOW);

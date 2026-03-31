@@ -25,19 +25,21 @@ void ConfigManager::loadDefaults() {
     escTime50       = ESC_50_TIME;
     escTime75       = ESC_75_TIME;
     escTime100      = ESC_100_TIME;
-    escTime75From100 = ESC_75_TIME_100;
+    escTimeAfterFullThrottle = ESC_TIME_AFTER_FULL;
 
     // Throttle duty cycles
     escEcoMode      = ESC_ECO_MODE;
     escPaddleMode   = ESC_PADDLE_MODE;
     escBreakingMode = ESC_BREAKING_MODE;
     escFullThrottle = ESC_FULL_THROTTLE_MODE;
+    escAfterFullThrottle = ESC_AFTER_FULL_THROTTLE_MODE;
     escRampRate     = ESC_RAMP_RATE;
 
     // Battery
     battHigh        = BATT_THRESHOLD_HIGH;
     battMedium      = BATT_THRESHOLD_MEDIUM;
     battLow         = BATT_THRESHOLD_LOW;
+    battStop        = BATT_THRESHOLD_STOP;
     battHysteresis  = BATT_HYSTERESIS;
 
     // Temperature
@@ -48,6 +50,14 @@ void ConfigManager::loadDefaults() {
     currentOvercurrent = CURRENT_THRESHOLD_OVERCURRENT;
     currentReverse     = CURRENT_THRESHOLD_REVERSE;
     currentHysteresis  = CURRENT_HYSTERESIS;
+
+    // WiFi / OTA
+    strncpy(wifiSsid, OTA_AP_SSID, sizeof(wifiSsid) - 1);
+    wifiSsid[sizeof(wifiSsid) - 1] = '\0';
+    strncpy(wifiPassword, OTA_AP_PASSWORD, sizeof(wifiPassword) - 1);
+    wifiPassword[sizeof(wifiPassword) - 1] = '\0';
+    strncpy(otaHostname, OTA_HOSTNAME, sizeof(otaHostname) - 1);
+    otaHostname[sizeof(otaHostname) - 1] = '\0';
 }
 
 void ConfigManager::begin() {
@@ -62,19 +72,21 @@ void ConfigManager::begin() {
     escTime50        = prefs.getULong("esc_t50",     ESC_50_TIME);
     escTime75        = prefs.getULong("esc_t75",     ESC_75_TIME);
     escTime100       = prefs.getULong("esc_t100",    ESC_100_TIME);
-    escTime75From100 = prefs.getULong("esc_t75_100", ESC_75_TIME_100);
+    escTimeAfterFullThrottle = prefs.getULong("esc_t_after", prefs.getULong("esc_t_after_full", prefs.getULong("esc_t75_100", ESC_TIME_AFTER_FULL)));
 
     // Throttle duty cycles
     escEcoMode       = prefs.getUShort("esc_eco",     ESC_ECO_MODE);
     escPaddleMode    = prefs.getUShort("esc_paddle",  ESC_PADDLE_MODE);
     escBreakingMode  = prefs.getUShort("esc_break",   ESC_BREAKING_MODE);
     escFullThrottle  = prefs.getUShort("esc_full",    ESC_FULL_THROTTLE_MODE);
+    escAfterFullThrottle = prefs.getUShort("esc_after", prefs.getUShort("esc_after_full", ESC_AFTER_FULL_THROTTLE_MODE));
     escRampRate      = prefs.getFloat("esc_ramp",    ESC_RAMP_RATE);
 
     // Battery
     battHigh         = prefs.getFloat("batt_high",   BATT_THRESHOLD_HIGH);
     battMedium       = prefs.getFloat("batt_med",    BATT_THRESHOLD_MEDIUM);
     battLow          = prefs.getFloat("batt_low",    BATT_THRESHOLD_LOW);
+    battStop         = prefs.getFloat("batt_stop",   BATT_THRESHOLD_STOP);
     battHysteresis   = prefs.getFloat("batt_hyst",   BATT_HYSTERESIS);
 
     // Temperature
@@ -86,16 +98,28 @@ void ConfigManager::begin() {
     currentReverse     = prefs.getFloat("curr_rev",  CURRENT_THRESHOLD_REVERSE);
     currentHysteresis  = prefs.getFloat("curr_hyst", CURRENT_HYSTERESIS);
 
+    // WiFi / OTA
+    String ssid = prefs.getString("wifi_ssid", OTA_AP_SSID);
+    String pass = prefs.getString("wifi_pass", OTA_AP_PASSWORD);
+    String host = prefs.getString("ota_host",  OTA_HOSTNAME);
+    strncpy(wifiSsid, ssid.c_str(), sizeof(wifiSsid) - 1);
+    wifiSsid[sizeof(wifiSsid) - 1] = '\0';
+    strncpy(wifiPassword, pass.c_str(), sizeof(wifiPassword) - 1);
+    wifiPassword[sizeof(wifiPassword) - 1] = '\0';
+    strncpy(otaHostname, host.c_str(), sizeof(otaHostname) - 1);
+    otaHostname[sizeof(otaHostname) - 1] = '\0';
+
     prefs.end();
 
     ESP_LOGI(TAG, "Settings loaded from NVS");
-    ESP_LOGD(TAG, "  Batt: high=%.2fV, med=%.2fV, low=%.2fV, hyst=%.2fV", battHigh, battMedium, battLow, battHysteresis);
+    ESP_LOGD(TAG, "  Batt: high=%.2fV, med=%.2fV, low=%.2fV, stop=%.2fV, hyst=%.2fV", battHigh, battMedium, battLow, battStop, battHysteresis);
     ESP_LOGD(TAG, "  Temp: target=%.1fC, hyst=%.1fC", tempTarget, tempHysteresis);
     ESP_LOGD(TAG, "  Current: OC=%.1fA, rev=%.1fA, hyst=%.1fA", currentOvercurrent, currentReverse, currentHysteresis);
-    ESP_LOGD(TAG, "  ESC: eco=%u, paddle=%u, break=%u, full=%u, ramp=%.1f%%/s",
-             escEcoMode, escPaddleMode, escBreakingMode, escFullThrottle, escRampRate);
-    ESP_LOGD(TAG, "  Timers: t25=%lums, t50=%lums, t75=%lums, t100=%lums, t75from100=%lums",
-             escTime25, escTime50, escTime75, escTime100, escTime75From100);
+    ESP_LOGD(TAG, "  WiFi: SSID=%s, host=%s", wifiSsid, otaHostname);
+    ESP_LOGD(TAG, "  ESC: eco=%u, paddle=%u, break=%u, full=%u, after_full=%u, ramp=%.1f%%/s",
+             escEcoMode, escPaddleMode, escBreakingMode, escFullThrottle, escAfterFullThrottle, escRampRate);
+    ESP_LOGD(TAG, "  Timers: t25=%lums, t50=%lums, t75=%lums, t100=%lums, t_after_full=%lums",
+             escTime25, escTime50, escTime75, escTime100, escTimeAfterFullThrottle);
 }
 
 bool ConfigManager::save() {
@@ -112,19 +136,21 @@ bool ConfigManager::save() {
     ok &= (prefs.putULong("esc_t50",     escTime50)        > 0);
     ok &= (prefs.putULong("esc_t75",     escTime75)        > 0);
     ok &= (prefs.putULong("esc_t100",    escTime100)       > 0);
-    ok &= (prefs.putULong("esc_t75_100", escTime75From100) > 0);
+    ok &= (prefs.putULong("esc_t_after", escTimeAfterFullThrottle) > 0);
 
     // Throttle duty cycles
     ok &= (prefs.putUShort("esc_eco",     escEcoMode)       > 0);
     ok &= (prefs.putUShort("esc_paddle",  escPaddleMode)    > 0);
     ok &= (prefs.putUShort("esc_break",   escBreakingMode)  > 0);
     ok &= (prefs.putUShort("esc_full",    escFullThrottle)  > 0);
+    ok &= (prefs.putUShort("esc_after", escAfterFullThrottle) > 0);
     ok &= (prefs.putFloat("esc_ramp",    escRampRate)      > 0);
 
     // Battery
     ok &= (prefs.putFloat("batt_high",   battHigh)         > 0);
     ok &= (prefs.putFloat("batt_med",    battMedium)       > 0);
     ok &= (prefs.putFloat("batt_low",    battLow)          > 0);
+    ok &= (prefs.putFloat("batt_stop",   battStop)         > 0);
     ok &= (prefs.putFloat("batt_hyst",   battHysteresis)   > 0);
 
     // Temperature
@@ -135,6 +161,11 @@ bool ConfigManager::save() {
     ok &= (prefs.putFloat("curr_oc",     currentOvercurrent) > 0);
     ok &= (prefs.putFloat("curr_rev",    currentReverse)     > 0);
     ok &= (prefs.putFloat("curr_hyst",   currentHysteresis)  > 0);
+
+    // WiFi / OTA
+    ok &= (prefs.putString("wifi_ssid",  wifiSsid)    > 0);
+    ok &= (prefs.putString("wifi_pass",  wifiPassword) > 0);
+    ok &= (prefs.putString("ota_host",   otaHostname)  > 0);
 
     prefs.end();
 
@@ -158,6 +189,7 @@ void ConfigManager::applyTo(MoaBattControl& batt, MoaCurrentControl& current,
     batt.setDividerRatio(BATT_DIVIDER_RATIO);
     batt.setHighThreshold(battHigh);
     batt.setLowThreshold(battLow);
+    batt.setStopThreshold(battStop);
     batt.setHysteresis(battHysteresis);
 
     // Current sensor configuration
@@ -175,7 +207,8 @@ void ConfigManager::applyTo(MoaBattControl& batt, MoaCurrentControl& current,
     esc.setRampRate(escRampRate);
 
     ESP_LOGI(TAG, "Configuration applied to devices");
-    ESP_LOGD(TAG, "  Batt: high=%.2fV, med=%.2fV, low=%.2fV, hyst=%.2fV", battHigh, battMedium, battLow, battHysteresis);
+    ESP_LOGD(TAG, "  Batt: high=%.2fV, med=%.2fV, low=%.2fV, stop=%.2fV, hyst=%.2fV", battHigh, battMedium, battLow, battStop, battHysteresis);
+    ESP_LOGD(TAG, "  WiFi: SSID=%s, host=%s", wifiSsid, otaHostname);
     ESP_LOGD(TAG, "  Current: OC=%.1fA, rev=%.1fA, hyst=%.1fA", currentOvercurrent, currentReverse, currentHysteresis);
     ESP_LOGD(TAG, "  Temp: target=%.1fC, hyst=%.1fC", tempTarget, tempHysteresis);
     ESP_LOGD(TAG, "  ESC ramp: %.1f%%/s", escRampRate);

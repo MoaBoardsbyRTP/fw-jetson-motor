@@ -140,19 +140,21 @@ void UartCli::handleDump() {
     printSetting("esc_t50");
     printSetting("esc_t75");
     printSetting("esc_t100");
-    printSetting("esc_t75_100");
+    printSetting("esc_t_after");
 
     Serial.println(F("--- Throttle Duty Cycles (0-1023) ---"));
     printSetting("esc_eco");
     printSetting("esc_paddle");
     printSetting("esc_break");
     printSetting("esc_full");
+    printSetting("esc_after");
     printSetting("esc_ramp");
 
     Serial.println(F("--- Battery Thresholds (V) ---"));
     printSetting("batt_high");
     printSetting("batt_med");
     printSetting("batt_low");
+    printSetting("batt_stop");
     printSetting("batt_hyst");
 
     Serial.println(F("--- Temperature Thresholds (C) ---"));
@@ -163,6 +165,11 @@ void UartCli::handleDump() {
     printSetting("curr_oc");
     printSetting("curr_rev");
     printSetting("curr_hyst");
+
+    Serial.println(F("--- WiFi / OTA ---"));
+    printSetting("wifi_ssid");
+    printSetting("wifi_pass");
+    printSetting("ota_host");
 }
 
 void UartCli::handleHelp() {
@@ -177,14 +184,15 @@ void UartCli::handleHelp() {
     Serial.println(F("  help            Show this help"));
     Serial.println();
     Serial.println(F("Keys:"));
-    Serial.println(F("  esc_t25, esc_t50, esc_t75, esc_t100, esc_t75_100  (ms)"));
-    Serial.println(F("  esc_eco, esc_paddle, esc_break, esc_full           (duty 0-1023)"));
+    Serial.println(F("  esc_t25, esc_t50, esc_t75, esc_t100, esc_t_after       (ms)"));
+    Serial.println(F("  esc_eco, esc_paddle, esc_break, esc_full, esc_after    (duty 0-1023)"));
     Serial.println(F("  esc_ramp                                           (%/s)"));
-    Serial.println(F("  batt_high, batt_med, batt_low, batt_hyst           (V)"));
+    Serial.println(F("  batt_high, batt_med, batt_low, batt_stop, batt_hyst (V)"));
     Serial.println(F("  temp_tgt, temp_hyst                                (C)"));
     Serial.println(F("  curr_oc, curr_rev, curr_hyst                       (A)"));
+    Serial.println(F("  wifi_ssid, wifi_pass, ota_host                      (string)"));
     Serial.println();
-    Serial.println(F("Workflow: set <key> <val> → apply → (test) → save"));
+    Serial.println(F("Workflow: set <key> <val> \u2192 apply \u2192 (test) \u2192 save"));
 }
 
 void UartCli::applyConfig() {
@@ -197,19 +205,24 @@ bool UartCli::printSetting(const char* key) {
     if (strcmp(key, "esc_t50") == 0)      { Serial.printf("  %-12s = %lu ms\n", key, _config.escTime50); return true; }
     if (strcmp(key, "esc_t75") == 0)      { Serial.printf("  %-12s = %lu ms\n", key, _config.escTime75); return true; }
     if (strcmp(key, "esc_t100") == 0)     { Serial.printf("  %-12s = %lu ms\n", key, _config.escTime100); return true; }
-    if (strcmp(key, "esc_t75_100") == 0)  { Serial.printf("  %-12s = %lu ms\n", key, _config.escTime75From100); return true; }
+    if (strcmp(key, "esc_t_after") == 0)      { Serial.printf("  %-12s = %lu ms\n", key, _config.escTimeAfterFullThrottle); return true; }
+    if (strcmp(key, "esc_t_after_full") == 0) { Serial.printf("  %-12s = %lu ms\n", key, _config.escTimeAfterFullThrottle); return true; }
+    if (strcmp(key, "esc_t75_100") == 0)     { Serial.printf("  %-12s = %lu ms\n", key, _config.escTimeAfterFullThrottle); return true; }
 
     // Throttle percentages
     if (strcmp(key, "esc_eco") == 0)      { Serial.printf("  %-12s = %u duty\n", key, _config.escEcoMode); return true; }
     if (strcmp(key, "esc_paddle") == 0)   { Serial.printf("  %-12s = %u duty\n", key, _config.escPaddleMode); return true; }
     if (strcmp(key, "esc_break") == 0)    { Serial.printf("  %-12s = %u duty\n", key, _config.escBreakingMode); return true; }
     if (strcmp(key, "esc_full") == 0)     { Serial.printf("  %-12s = %u duty\n", key, _config.escFullThrottle); return true; }
+    if (strcmp(key, "esc_after") == 0)      { Serial.printf("  %-12s = %u duty\n", key, _config.escAfterFullThrottle); return true; }
+    if (strcmp(key, "esc_after_full") == 0) { Serial.printf("  %-12s = %u duty\n", key, _config.escAfterFullThrottle); return true; }
     if (strcmp(key, "esc_ramp") == 0)     { Serial.printf("  %-12s = %.1f %%/s\n", key, _config.escRampRate); return true; }
 
     // Battery
     if (strcmp(key, "batt_high") == 0)    { Serial.printf("  %-12s = %.2f V\n", key, _config.battHigh); return true; }
     if (strcmp(key, "batt_med") == 0)     { Serial.printf("  %-12s = %.2f V\n", key, _config.battMedium); return true; }
     if (strcmp(key, "batt_low") == 0)     { Serial.printf("  %-12s = %.2f V\n", key, _config.battLow); return true; }
+    if (strcmp(key, "batt_stop") == 0)    { Serial.printf("  %-12s = %.2f V\n", key, _config.battStop); return true; }
     if (strcmp(key, "batt_hyst") == 0)    { Serial.printf("  %-12s = %.2f V\n", key, _config.battHysteresis); return true; }
 
     // Temperature
@@ -221,6 +234,11 @@ bool UartCli::printSetting(const char* key) {
     if (strcmp(key, "curr_rev") == 0)     { Serial.printf("  %-12s = %.1f A\n", key, _config.currentReverse); return true; }
     if (strcmp(key, "curr_hyst") == 0)    { Serial.printf("  %-12s = %.1f A\n", key, _config.currentHysteresis); return true; }
 
+    // WiFi / OTA
+    if (strcmp(key, "wifi_ssid") == 0)    { Serial.printf("  %-12s = %s\n", key, _config.wifiSsid); return true; }
+    if (strcmp(key, "wifi_pass") == 0)    { Serial.printf("  %-12s = %s\n", key, _config.wifiPassword); return true; }
+    if (strcmp(key, "ota_host") == 0)     { Serial.printf("  %-12s = %s\n", key, _config.otaHostname); return true; }
+
     return false;
 }
 
@@ -230,19 +248,24 @@ bool UartCli::setSetting(const char* key, const char* value) {
     if (strcmp(key, "esc_t50") == 0)      { _config.escTime50 = strtoul(value, nullptr, 10); return true; }
     if (strcmp(key, "esc_t75") == 0)      { _config.escTime75 = strtoul(value, nullptr, 10); return true; }
     if (strcmp(key, "esc_t100") == 0)     { _config.escTime100 = strtoul(value, nullptr, 10); return true; }
-    if (strcmp(key, "esc_t75_100") == 0)  { _config.escTime75From100 = strtoul(value, nullptr, 10); return true; }
+    if (strcmp(key, "esc_t_after") == 0)      { _config.escTimeAfterFullThrottle = strtoul(value, nullptr, 10); return true; }
+    if (strcmp(key, "esc_t_after_full") == 0) { _config.escTimeAfterFullThrottle = strtoul(value, nullptr, 10); return true; }
+    if (strcmp(key, "esc_t75_100") == 0)     { _config.escTimeAfterFullThrottle = strtoul(value, nullptr, 10); return true; }
 
     // Throttle duty cycles (uint16_t, clamped 0-1023)
     if (strcmp(key, "esc_eco") == 0)      { uint16_t v = (uint16_t)atoi(value); if (v > 1023) v = 1023; _config.escEcoMode = v; return true; }
     if (strcmp(key, "esc_paddle") == 0)   { uint16_t v = (uint16_t)atoi(value); if (v > 1023) v = 1023; _config.escPaddleMode = v; return true; }
     if (strcmp(key, "esc_break") == 0)    { uint16_t v = (uint16_t)atoi(value); if (v > 1023) v = 1023; _config.escBreakingMode = v; return true; }
     if (strcmp(key, "esc_full") == 0)     { uint16_t v = (uint16_t)atoi(value); if (v > 1023) v = 1023; _config.escFullThrottle = v; return true; }
+    if (strcmp(key, "esc_after") == 0)      { uint16_t v = (uint16_t)atoi(value); if (v > 1023) v = 1023; _config.escAfterFullThrottle = v; return true; }
+    if (strcmp(key, "esc_after_full") == 0) { uint16_t v = (uint16_t)atoi(value); if (v > 1023) v = 1023; _config.escAfterFullThrottle = v; return true; }
     if (strcmp(key, "esc_ramp") == 0)     { _config.escRampRate = atof(value); return true; }
 
     // Battery (float)
     if (strcmp(key, "batt_high") == 0)    { _config.battHigh = atof(value); return true; }
     if (strcmp(key, "batt_med") == 0)     { _config.battMedium = atof(value); return true; }
     if (strcmp(key, "batt_low") == 0)     { _config.battLow = atof(value); return true; }
+    if (strcmp(key, "batt_stop") == 0)    { _config.battStop = atof(value); return true; }
     if (strcmp(key, "batt_hyst") == 0)    { _config.battHysteresis = atof(value); return true; }
 
     // Temperature (float)
@@ -253,6 +276,11 @@ bool UartCli::setSetting(const char* key, const char* value) {
     if (strcmp(key, "curr_oc") == 0)      { _config.currentOvercurrent = atof(value); return true; }
     if (strcmp(key, "curr_rev") == 0)     { _config.currentReverse = atof(value); return true; }
     if (strcmp(key, "curr_hyst") == 0)    { _config.currentHysteresis = atof(value); return true; }
+
+    // WiFi / OTA (string)
+    if (strcmp(key, "wifi_ssid") == 0)    { strncpy(_config.wifiSsid, value, sizeof(_config.wifiSsid) - 1); _config.wifiSsid[sizeof(_config.wifiSsid) - 1] = '\0'; return true; }
+    if (strcmp(key, "wifi_pass") == 0)    { strncpy(_config.wifiPassword, value, sizeof(_config.wifiPassword) - 1); _config.wifiPassword[sizeof(_config.wifiPassword) - 1] = '\0'; return true; }
+    if (strcmp(key, "ota_host") == 0)     { strncpy(_config.otaHostname, value, sizeof(_config.otaHostname) - 1); _config.otaHostname[sizeof(_config.otaHostname) - 1] = '\0'; return true; }
 
     return false;
 }
