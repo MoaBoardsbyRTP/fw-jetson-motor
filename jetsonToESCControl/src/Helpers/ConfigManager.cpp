@@ -72,14 +72,14 @@ void ConfigManager::begin() {
     escTime50        = prefs.getULong("esc_t50",     ESC_50_TIME);
     escTime75        = prefs.getULong("esc_t75",     ESC_75_TIME);
     escTime100       = prefs.getULong("esc_t100",    ESC_100_TIME);
-    escTimeAfterFullThrottle = prefs.getULong("esc_t_after_full", prefs.getULong("esc_t75_100", ESC_TIME_AFTER_FULL));
+    escTimeAfterFullThrottle = prefs.getULong("esc_t_after", prefs.getULong("esc_t_after_full", prefs.getULong("esc_t75_100", ESC_TIME_AFTER_FULL)));
 
     // Throttle duty cycles
     escEcoMode       = prefs.getUShort("esc_eco",     ESC_ECO_MODE);
     escPaddleMode    = prefs.getUShort("esc_paddle",  ESC_PADDLE_MODE);
     escBreakingMode  = prefs.getUShort("esc_break",   ESC_BREAKING_MODE);
     escFullThrottle  = prefs.getUShort("esc_full",    ESC_FULL_THROTTLE_MODE);
-    escAfterFullThrottle = prefs.getUShort("esc_after_full", ESC_AFTER_FULL_THROTTLE_MODE);
+    escAfterFullThrottle = prefs.getUShort("esc_after", prefs.getUShort("esc_after_full", ESC_AFTER_FULL_THROTTLE_MODE));
     escRampRate      = prefs.getFloat("esc_ramp",    ESC_RAMP_RATE);
 
     // Battery
@@ -136,14 +136,14 @@ bool ConfigManager::save() {
     ok &= (prefs.putULong("esc_t50",     escTime50)        > 0);
     ok &= (prefs.putULong("esc_t75",     escTime75)        > 0);
     ok &= (prefs.putULong("esc_t100",    escTime100)       > 0);
-    ok &= (prefs.putULong("esc_t_after_full", escTimeAfterFullThrottle) > 0);
+    ok &= (prefs.putULong("esc_t_after", escTimeAfterFullThrottle) > 0);
 
     // Throttle duty cycles
     ok &= (prefs.putUShort("esc_eco",     escEcoMode)       > 0);
     ok &= (prefs.putUShort("esc_paddle",  escPaddleMode)    > 0);
     ok &= (prefs.putUShort("esc_break",   escBreakingMode)  > 0);
     ok &= (prefs.putUShort("esc_full",    escFullThrottle)  > 0);
-    ok &= (prefs.putUShort("esc_after_full", escAfterFullThrottle) > 0);
+    ok &= (prefs.putUShort("esc_after", escAfterFullThrottle) > 0);
     ok &= (prefs.putFloat("esc_ramp",    escRampRate)      > 0);
 
     // Battery

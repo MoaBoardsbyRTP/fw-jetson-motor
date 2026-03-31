@@ -18,7 +18,7 @@ All settings fall back to their `Constants.h` default if NVS is empty or corrupt
 | 50% throttle timeout | `esc_t50` | `uint32_t` (ms) | 180000 | `ESC_50_TIME` |
 | 75% throttle timeout | `esc_t75` | `uint32_t` (ms) | 90000 | `ESC_75_TIME` |
 | 100% throttle timeout | `esc_t100` | `uint32_t` (ms) | 15000 | `ESC_100_TIME` |
-| Time after full throttle | `esc_t_after_full` | `uint32_t` (ms) | 30000 | `ESC_TIME_AFTER_FULL` |
+| Time after full throttle | `esc_t_after` | `uint32_t` (ms) | 30000 | `ESC_TIME_AFTER_FULL` |
 
 ### 2. Throttle Percentages (speed modes)
 
@@ -28,7 +28,7 @@ All settings fall back to their `Constants.h` default if NVS is empty or corrupt
 | Paddle mode throttle | `esc_paddle` | `uint8_t` (%) | 50 | `ESC_PADDLE_MODE` |
 | Breaking zone throttle | `esc_break` | `uint8_t` (%) | 75 | `ESC_BREAKING_MODE` |
 | Full throttle | `esc_full` | `uint8_t` (%) | 100 | `ESC_FULL_THROTTLE_MODE` |
-| Post-full throttle | `esc_after_full` | `uint8_t` (%) | 75 | `ESC_AFTER_FULL_THROTTLE_MODE` |
+| Post-full throttle | `esc_after` | `uint8_t` (%) | 75 | `ESC_AFTER_FULL_THROTTLE_MODE` |
 | ESC ramp rate | `esc_ramp` | `float` (%/s) | 200.0 | `ESC_RAMP_RATE` |
 
 ### 3. Battery Thresholds

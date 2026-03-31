@@ -32,7 +32,7 @@
 | `esc_t50` | Duration at 50% throttle | 180000 |
 | `esc_t75` | Duration at 75% throttle | 90000 |
 | `esc_t100` | Duration at 100% throttle | 15000 |
-| `esc_t_after_full` | Duration after stepping down from 100% throttle | 30000 |
+| `esc_t_after` | Duration after stepping down from 100% throttle | 30000 |
 
 ### Throttle Duty Cycles (10-bit PWM, servo range ~51–102)
 
@@ -42,7 +42,7 @@
 | `esc_paddle` | Paddle out mode duty cycle | 77 | duty (0-1023) |
 | `esc_break` | Breaking zone mode duty cycle | 89 | duty (0-1023) |
 | `esc_full` | Full throttle duty cycle | 102 | duty (0-1023) |
-| `esc_after_full` | Post-full-throttle duty cycle | 87 | duty (0-1023) |
+| `esc_after` | Post-full-throttle duty cycle | 87 | duty (0-1023) |
 | `esc_ramp` | Throttle ramp rate | 200.0 | %/s |
 
 > **Note:** At 50Hz / 10-bit resolution, the servo pulse range is ~51 (1ms) to ~102 (2ms).
