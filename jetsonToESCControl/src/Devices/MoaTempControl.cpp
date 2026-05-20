@@ -14,15 +14,16 @@ MoaTempControl::MoaTempControl(QueueHandle_t eventQueue, uint8_t pin,
                                uint8_t numSamples)
     : _eventQueue(eventQueue)
     , _statsQueue(nullptr)
-    , _oneWire(pin)
-    , _sensors(&_oneWire)
+    , _pin(pin)
+    , _thermistor(nullptr)
+    , _referenceResistance(MOA_NTC_REFERENCE_RESISTANCE)
+    , _nominalResistance(MOA_NTC_NOMINAL_RESISTANCE)
+    , _nominalTempC(MOA_NTC_NOMINAL_TEMP_C)
+    , _betaCoefficient(MOA_NTC_BETA_COEFFICIENT)
     , _targetTemp(0.0f)
     , _currentTemp(0.0f)
     , _hysteresis(0.0f)
     , _state(MoaTempState::BELOW_TARGET)
-    , _convState(TempConvState::IDLE)
-    , _convRequestTime(0)
-    , _convDelayMs(750)
     , _samples(nullptr)
     , _numSamples(0)
     , _sampleIndex(0)
@@ -38,41 +39,38 @@ MoaTempControl::~MoaTempControl() {
         delete[] _samples;
         _samples = nullptr;
     }
+    if (_thermistor != nullptr) {
+        delete _thermistor;
+        _thermistor = nullptr;
+    }
 }
 
 void MoaTempControl::begin() {
-    _sensors.begin();
-    _sensors.setWaitForConversion(false);
-    _convDelayMs = _sensors.millisToWaitForConversion();
-    ESP_LOGI(TAG, "Temperature sensor begin, devices=%d, convMs=%d",
-             _sensors.getDeviceCount(), _convDelayMs);
+    if (_thermistor != nullptr) {
+        delete _thermistor;
+    }
+    _thermistor = new NTC_Thermistor(
+        _pin,
+        _referenceResistance,
+        _nominalResistance,
+        _nominalTempC,
+        _betaCoefficient
+    );
+    ESP_LOGI(TAG, "NTC sensor begin on pin %d (Rref=%.0f, Rnom=%.0f, Tnom=%.0f, Beta=%.0f)",
+             _pin, _referenceResistance, _nominalResistance, _nominalTempC, _betaCoefficient);
 }
 
 void MoaTempControl::update() {
-    switch (_convState) {
-        case TempConvState::IDLE:
-            // Start a non-blocking conversion request
-            _sensors.requestTemperatures();
-            _convRequestTime = millis();
-            _convState = TempConvState::WAITING;
-            return;  // Come back next loop iteration
-
-        case TempConvState::WAITING:
-            // Check if conversion time has elapsed
-            if ((millis() - _convRequestTime) < _convDelayMs) {
-                return;  // Not ready yet, let other sensors run
-            }
-            // Conversion done — read result and fall through to processing
-            _convState = TempConvState::IDLE;
-            break;
+    if (_thermistor == nullptr) {
+        return;
     }
 
-    // Read the converted temperature
-    _currentTemp = _sensors.getTempCByIndex(0);
+    // Read temperature from NTC thermistor
+    _currentTemp = _thermistor->readCelsius();
     
-    // Skip invalid readings (sensor disconnected or error)
-    if (_currentTemp == DEVICE_DISCONNECTED_C) {
-        ESP_LOGW(TAG, "Temperature sensor disconnected!");
+    // Skip invalid readings (NaN or extreme values)
+    if (isnan(_currentTemp) || _currentTemp < -40.0f || _currentTemp > 150.0f) {
+        ESP_LOGW(TAG, "Invalid NTC reading: %.1f", _currentTemp);
         return;
     }
     

@@ -4,7 +4,7 @@
  * @author Oscar Martinez
  * @date 2025-01-28
  * 
- * This library provides temperature monitoring using Dallas DS18B20 sensors
+ * This library provides temperature monitoring using an NTC thermistor
  * that integrates with the Moa event queue system. When temperature crosses
  * thresholds, it pushes an event to the specified FreeRTOS queue for processing
  * by ControlTask.
@@ -13,8 +13,7 @@
 #pragma once
 
 #include <Arduino.h>
-#include <OneWire.h>
-#include <DallasTemperature.h>
+#include <NTC_Thermistor.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "ControlCommand.h"
@@ -39,17 +38,29 @@ enum class MoaTempState {
 };
 
 /**
- * @brief DS18B20 conversion state for non-blocking reads
+ * @brief Default NTC series (reference) resistance in ohms
  */
-enum class TempConvState {
-    IDLE,       ///< Ready to request a new conversion
-    WAITING     ///< Conversion in progress, waiting for result
-};
+#define MOA_NTC_REFERENCE_RESISTANCE 10000
+
+/**
+ * @brief Default NTC nominal resistance in ohms (at nominal temperature)
+ */
+#define MOA_NTC_NOMINAL_RESISTANCE   10000
+
+/**
+ * @brief Default NTC nominal temperature in Celsius
+ */
+#define MOA_NTC_NOMINAL_TEMP_C       25
+
+/**
+ * @brief Default NTC Beta coefficient
+ */
+#define MOA_NTC_BETA_COEFFICIENT     3950
 
 /**
  * @brief Temperature control class with hysteresis-based events and averaging
  * 
- * MoaTempControl provides temperature monitoring using Dallas DS18B20 sensors with:
+ * MoaTempControl provides temperature monitoring using an NTC thermistor with:
  * - Configurable moving average filtering
  * - Hysteresis-based threshold detection
  * - Event-driven integration via FreeRTOS queue
@@ -86,7 +97,7 @@ public:
      * @brief Construct a new MoaTempControl object
      * 
      * @param eventQueue FreeRTOS queue handle to push temperature events to
-     * @param pin GPIO pin connected to the DS18B20 data line
+     * @param pin Analog GPIO pin connected to the NTC voltage divider
      * @param numSamples Number of samples for moving average (default: MOA_TEMP_DEFAULT_SAMPLES)
      */
     MoaTempControl(QueueHandle_t eventQueue, uint8_t pin,
@@ -195,15 +206,16 @@ public:
 private:
     QueueHandle_t _eventQueue;             ///< Queue to push events to
     QueueHandle_t _statsQueue;             ///< Queue to push stats readings to
-    OneWire _oneWire;                      ///< OneWire bus instance
-    DallasTemperature _sensors;            ///< Dallas temperature sensor interface
+    uint8_t _pin;                          ///< Analog input pin
+    NTC_Thermistor* _thermistor;           ///< NTC thermistor instance
+    float _referenceResistance;            ///< Series resistor value in ohms
+    float _nominalResistance;              ///< NTC nominal resistance in ohms
+    float _nominalTempC;                   ///< NTC nominal temperature in Celsius
+    float _betaCoefficient;                ///< NTC Beta coefficient
     float _targetTemp;                     ///< Target temperature threshold
     float _currentTemp;                    ///< Current raw temperature reading
     float _hysteresis;                     ///< Hysteresis value for lower threshold
     MoaTempState _state;                   ///< Current temperature state
-    TempConvState _convState;              ///< DS18B20 conversion state machine
-    uint32_t _convRequestTime;             ///< millis() when conversion was requested
-    uint16_t _convDelayMs;                 ///< Conversion time for current resolution
     
     float* _samples;                       ///< Circular buffer for temperature samples
     uint8_t _numSamples;                   ///< Number of samples for averaging

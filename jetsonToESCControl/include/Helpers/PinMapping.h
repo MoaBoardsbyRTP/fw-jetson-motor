@@ -34,7 +34,7 @@
  * @brief MCP23018 interrupt pin for Port A (buttons)
  * Active LOW, directly connected to MCP23018 INTA
  */
-#define PIN_I2C_INT_A           GPIO_NUM_2
+#define PIN_I2C_INT_A           GPIO_NUM_0
 
 /**
  * @brief Current sense (ADC input)
@@ -46,7 +46,7 @@
  * @brief Temperature sense (OneWire data)
  * Connected to DS18B20 temperature sensor
  */
-#define PIN_TEMP_SENSE          GPIO_NUM_6
+#define PIN_TEMP_SENSE          GPIO_NUM_2
 
 /**
  * @brief ESC PWM output
