@@ -58,6 +58,11 @@ enum class MoaTempState {
 #define MOA_NTC_BETA_COEFFICIENT     3950
 
 /**
+ * @brief ESP32 ADC reference voltage in millivolts
+ */
+#define MOA_NTC_ADC_VREF_MV          4400
+
+/**
  * @brief Temperature control class with hysteresis-based events and averaging
  * 
  * MoaTempControl provides temperature monitoring using an NTC thermistor with:
@@ -212,11 +217,11 @@ private:
     float _nominalResistance;              ///< NTC nominal resistance in ohms
     float _nominalTempC;                   ///< NTC nominal temperature in Celsius
     float _betaCoefficient;                ///< NTC Beta coefficient
+    uint16_t _adc_vref;                    ///< ADC reference voltage in millivolts
     float _targetTemp;                     ///< Target temperature threshold
     float _currentTemp;                    ///< Current raw temperature reading
     float _hysteresis;                     ///< Hysteresis value for lower threshold
     MoaTempState _state;                   ///< Current temperature state
-    
     float* _samples;                       ///< Circular buffer for temperature samples
     uint8_t _numSamples;                   ///< Number of samples for averaging
     uint8_t _sampleIndex;                  ///< Current index in circular buffer

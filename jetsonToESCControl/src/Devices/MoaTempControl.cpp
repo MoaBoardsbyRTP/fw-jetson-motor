@@ -20,6 +20,7 @@ MoaTempControl::MoaTempControl(QueueHandle_t eventQueue, uint8_t pin,
     , _nominalResistance(MOA_NTC_NOMINAL_RESISTANCE)
     , _nominalTempC(MOA_NTC_NOMINAL_TEMP_C)
     , _betaCoefficient(MOA_NTC_BETA_COEFFICIENT)
+    , _adc_vref(MOA_NTC_ADC_VREF_MV)
     , _targetTemp(0.0f)
     , _currentTemp(0.0f)
     , _hysteresis(0.0f)
@@ -49,12 +50,13 @@ void MoaTempControl::begin() {
     if (_thermistor != nullptr) {
         delete _thermistor;
     }
-    _thermistor = new NTC_Thermistor(
+    _thermistor = new NTC_Thermistor_ESP32(
         _pin,
         _referenceResistance,
         _nominalResistance,
         _nominalTempC,
-        _betaCoefficient
+        _betaCoefficient,
+        _adc_vref
     );
     ESP_LOGI(TAG, "NTC sensor begin on pin %d (Rref=%.0f, Rnom=%.0f, Tnom=%.0f, Beta=%.0f)",
              _pin, _referenceResistance, _nominalResistance, _nominalTempC, _betaCoefficient);
