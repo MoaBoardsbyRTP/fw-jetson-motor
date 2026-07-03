@@ -154,7 +154,7 @@
 /**
  * @brief ADC reference voltage in millivolts (ESP32-C3, 3.3V supply)
  */
-#define NTC_ADC_VREF_MV            3300
+#define NTC_ADC_VREF_MV            4450
 
 // =============================================================================
 // Button Configuration

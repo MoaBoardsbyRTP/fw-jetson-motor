@@ -46,7 +46,7 @@
  * @brief Temperature sense (OneWire data)
  * Connected to DS18B20 temperature sensor
  */
-#define PIN_TEMP_SENSE          GPIO_NUM_6
+#define PIN_TEMP_SENSE          GPIO_NUM_2
 
 /**
  * @brief ESC PWM output
