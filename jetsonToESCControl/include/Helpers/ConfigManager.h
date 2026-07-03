@@ -28,6 +28,19 @@ class ESCController;
 #define CONFIG_NVS_NAMESPACE "moa_config"
 
 /**
+ * @brief Selects which physical temperature sensor driver is active.
+ *
+ * Default MUST stay DS18B20 (0): already-deployed boards upgrading
+ * firmware will not have this NVS key set yet, and their physical
+ * hardware is DS18B20. New (NTC) boards must explicitly set this once
+ * during provisioning (CLI: `set temp_sens 1` then `save`).
+ */
+enum class TempSensorType : uint8_t {
+    DS18B20 = 0,
+    NTC = 1
+};
+
+/**
  * @brief Persistent configuration manager
  * 
  * All public members are the live settings. On begin(), they are
@@ -90,6 +103,7 @@ public:
     // === Temperature Thresholds (°C) ===
     float tempTarget;
     float tempHysteresis;
+    TempSensorType tempSensorType;  ///< Which sensor driver is physically installed
 
     // === Current Thresholds (A) ===
     float currentOvercurrent;

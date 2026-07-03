@@ -160,6 +160,7 @@ void UartCli::handleDump() {
     Serial.println(F("--- Temperature Thresholds (C) ---"));
     printSetting("temp_tgt");
     printSetting("temp_hyst");
+    printSetting("temp_sens");
 
     Serial.println(F("--- Current Thresholds (A) ---"));
     printSetting("curr_oc");
@@ -189,6 +190,7 @@ void UartCli::handleHelp() {
     Serial.println(F("  esc_ramp                                           (%/s)"));
     Serial.println(F("  batt_high, batt_med, batt_low, batt_stop, batt_hyst (V)"));
     Serial.println(F("  temp_tgt, temp_hyst                                (C)"));
+    Serial.println(F("  temp_sens                                          (0=DS18B20, 1=NTC; needs reboot)"));
     Serial.println(F("  curr_oc, curr_rev, curr_hyst                       (A)"));
     Serial.println(F("  wifi_ssid, wifi_pass, ota_host                      (string)"));
     Serial.println();
@@ -228,6 +230,7 @@ bool UartCli::printSetting(const char* key) {
     // Temperature
     if (strcmp(key, "temp_tgt") == 0)     { Serial.printf("  %-12s = %.1f C\n", key, _config.tempTarget); return true; }
     if (strcmp(key, "temp_hyst") == 0)    { Serial.printf("  %-12s = %.1f C\n", key, _config.tempHysteresis); return true; }
+    if (strcmp(key, "temp_sens") == 0)    { Serial.printf("  %-12s = %u (%s)\n", key, (unsigned)_config.tempSensorType, _config.tempSensorType == TempSensorType::NTC ? "NTC" : "DS18B20"); return true; }
 
     // Current
     if (strcmp(key, "curr_oc") == 0)      { Serial.printf("  %-12s = %.1f A\n", key, _config.currentOvercurrent); return true; }
@@ -271,6 +274,7 @@ bool UartCli::setSetting(const char* key, const char* value) {
     // Temperature (float)
     if (strcmp(key, "temp_tgt") == 0)     { _config.tempTarget = atof(value); return true; }
     if (strcmp(key, "temp_hyst") == 0)    { _config.tempHysteresis = atof(value); return true; }
+    if (strcmp(key, "temp_sens") == 0)    { _config.tempSensorType = (atoi(value) != 0) ? TempSensorType::NTC : TempSensorType::DS18B20; return true; }
 
     // Current (float)
     if (strcmp(key, "curr_oc") == 0)      { _config.currentOvercurrent = atof(value); return true; }

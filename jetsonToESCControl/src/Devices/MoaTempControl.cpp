@@ -14,15 +14,12 @@ MoaTempControl::MoaTempControl(QueueHandle_t eventQueue, uint8_t pin,
                                uint8_t numSamples)
     : _eventQueue(eventQueue)
     , _statsQueue(nullptr)
-    , _oneWire(pin)
-    , _sensors(&_oneWire)
+    , _pin(pin)
+    , _sensor(nullptr)
     , _targetTemp(0.0f)
     , _currentTemp(0.0f)
     , _hysteresis(0.0f)
     , _state(MoaTempState::BELOW_TARGET)
-    , _convState(TempConvState::IDLE)
-    , _convRequestTime(0)
-    , _convDelayMs(750)
     , _samples(nullptr)
     , _numSamples(0)
     , _sampleIndex(0)
@@ -40,39 +37,32 @@ MoaTempControl::~MoaTempControl() {
     }
 }
 
+void MoaTempControl::setSensor(ITemperatureSensor* sensor) {
+    _sensor = sensor;
+}
+
 void MoaTempControl::begin() {
-    _sensors.begin();
-    _sensors.setWaitForConversion(false);
-    _convDelayMs = _sensors.millisToWaitForConversion();
-    ESP_LOGI(TAG, "Temperature sensor begin, devices=%d, convMs=%d",
-             _sensors.getDeviceCount(), _convDelayMs);
+    if (_sensor == nullptr) {
+        ESP_LOGE(TAG, "begin() called with no sensor injected!");
+        return;
+    }
+    _sensor->begin();
+    ESP_LOGI(TAG, "Temperature sensor begin (pin=%d)", _pin);
 }
 
 void MoaTempControl::update() {
-    switch (_convState) {
-        case TempConvState::IDLE:
-            // Start a non-blocking conversion request
-            _sensors.requestTemperatures();
-            _convRequestTime = millis();
-            _convState = TempConvState::WAITING;
-            return;  // Come back next loop iteration
-
-        case TempConvState::WAITING:
-            // Check if conversion time has elapsed
-            if ((millis() - _convRequestTime) < _convDelayMs) {
-                return;  // Not ready yet, let other sensors run
-            }
-            // Conversion done — read result and fall through to processing
-            _convState = TempConvState::IDLE;
-            break;
+    if (_sensor == nullptr) {
+        return;
     }
 
-    // Read the converted temperature
-    _currentTemp = _sensors.getTempCByIndex(0);
-    
-    // Skip invalid readings (sensor disconnected or error)
-    if (_currentTemp == DEVICE_DISCONNECTED_C) {
-        ESP_LOGW(TAG, "Temperature sensor disconnected!");
+    // Poll the sensor. Returns false if not ready yet (e.g. DS18B20 mid-conversion).
+    if (!_sensor->readCelsius(_currentTemp)) {
+        return;
+    }
+
+    // Skip invalid readings (NaN, disconnected sensor, or out-of-range error codes)
+    if (isnan(_currentTemp) || _currentTemp < -40.0f || _currentTemp > 150.0f) {
+        ESP_LOGW(TAG, "Invalid temperature reading: %.1f", _currentTemp);
         return;
     }
     

@@ -4,21 +4,21 @@
  * @author Oscar Martinez
  * @date 2025-01-28
  * 
- * This library provides temperature monitoring using Dallas DS18B20 sensors
- * that integrates with the Moa event queue system. When temperature crosses
- * thresholds, it pushes an event to the specified FreeRTOS queue for processing
- * by ControlTask.
+ * This library provides temperature monitoring, decoupled from the concrete
+ * sensor driver via ITemperatureSensor (DS18B20 or NTC thermistor can both
+ * be injected). It integrates with the Moa event queue system: when
+ * temperature crosses thresholds, it pushes an event to the specified
+ * FreeRTOS queue for processing by ControlTask.
  */
 
 #pragma once
 
 #include <Arduino.h>
-#include <OneWire.h>
-#include <DallasTemperature.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "ControlCommand.h"
 #include "StatsReading.h"
+#include "ITemperatureSensor.h"
 
 /**
  * @brief Default number of samples for temperature averaging
@@ -39,17 +39,9 @@ enum class MoaTempState {
 };
 
 /**
- * @brief DS18B20 conversion state for non-blocking reads
- */
-enum class TempConvState {
-    IDLE,       ///< Ready to request a new conversion
-    WAITING     ///< Conversion in progress, waiting for result
-};
-
-/**
  * @brief Temperature control class with hysteresis-based events and averaging
  * 
- * MoaTempControl provides temperature monitoring using Dallas DS18B20 sensors with:
+ * MoaTempControl provides temperature monitoring via an injected ITemperatureSensor with:
  * - Configurable moving average filtering
  * - Hysteresis-based threshold detection
  * - Event-driven integration via FreeRTOS queue
@@ -86,7 +78,7 @@ public:
      * @brief Construct a new MoaTempControl object
      * 
      * @param eventQueue FreeRTOS queue handle to push temperature events to
-     * @param pin GPIO pin connected to the DS18B20 data line
+     * @param pin GPIO pin connected to the sensor (kept for logging/compatibility)
      * @param numSamples Number of samples for moving average (default: MOA_TEMP_DEFAULT_SAMPLES)
      */
     MoaTempControl(QueueHandle_t eventQueue, uint8_t pin,
@@ -98,8 +90,16 @@ public:
     ~MoaTempControl();
 
     /**
+     * @brief Inject the concrete sensor backend to use
+     * @param sensor Pointer to a sensor implementation (not owned; lifetime
+     *               must outlive this MoaTempControl). Must be called before
+     *               begin().
+     */
+    void setSensor(ITemperatureSensor* sensor);
+
+    /**
      * @brief Initialize the temperature sensor
-     * @note Must be called before update()
+     * @note setSensor() must be called first; must be called before update()
      */
     void begin();
 
@@ -195,16 +195,13 @@ public:
 private:
     QueueHandle_t _eventQueue;             ///< Queue to push events to
     QueueHandle_t _statsQueue;             ///< Queue to push stats readings to
-    OneWire _oneWire;                      ///< OneWire bus instance
-    DallasTemperature _sensors;            ///< Dallas temperature sensor interface
+    uint8_t _pin;                          ///< Sensor pin (kept for logging/compatibility)
+    ITemperatureSensor* _sensor;           ///< Injected sensor backend (not owned)
     float _targetTemp;                     ///< Target temperature threshold
     float _currentTemp;                    ///< Current raw temperature reading
     float _hysteresis;                     ///< Hysteresis value for lower threshold
     MoaTempState _state;                   ///< Current temperature state
-    TempConvState _convState;              ///< DS18B20 conversion state machine
-    uint32_t _convRequestTime;             ///< millis() when conversion was requested
-    uint16_t _convDelayMs;                 ///< Conversion time for current resolution
-    
+
     float* _samples;                       ///< Circular buffer for temperature samples
     uint8_t _numSamples;                   ///< Number of samples for averaging
     uint8_t _sampleIndex;                  ///< Current index in circular buffer

@@ -21,6 +21,9 @@ MoaMainUnit::MoaMainUnit()
     , _cliTaskHandle(nullptr)
     , _otaTaskHandle(nullptr)
     , _mcpDevice(MCP23018_I2C_ADDR)
+    , _ntcSensor(PIN_TEMP_SENSE, NTC_REFERENCE_RESISTANCE, NTC_NOMINAL_RESISTANCE,
+                 NTC_NOMINAL_TEMP_C, NTC_BETA_COEFFICIENT, NTC_ADC_VREF_MV)
+    , _ds18b20Sensor(PIN_TEMP_SENSE)
     , _tempControl(_eventQueue, PIN_TEMP_SENSE)
     , _battControl(_eventQueue, PIN_BATT_LEVEL_SENSE)
     , _currentControl(_eventQueue, PIN_CURRENT_SENSE)
@@ -76,13 +79,18 @@ void MoaMainUnit::begin() {
     _battControl.setStatsQueue(_statsQueue);
     _currentControl.setStatsQueue(_statsQueue);
 
+    // Load configuration from NVS FIRST (falls back to Constants.h defaults).
+    // Must happen before initHardware() so the temp sensor selection is known
+    // before MoaTempControl::begin() is called.
+    _config.begin();
+
     // Initialize I2C
     initI2C();
 
     // Initialize hardware
     initHardware();
 
-    // Apply configuration
+    // Apply the rest of the configuration (thresholds, wifi, etc.)
     applyConfiguration();
 
     // Set initial state
@@ -162,7 +170,14 @@ void MoaMainUnit::initHardware() {
         ESP_LOGW(TAG, "MCP23018 initialization failed!");
     }
 
-    // Initialize temperature sensor
+    // Select and inject the temperature sensor backend per config, then initialize
+    if (_config.tempSensorType == TempSensorType::NTC) {
+        _tempControl.setSensor(&_ntcSensor);
+        ESP_LOGI(TAG, "Temperature sensor backend: NTC");
+    } else {
+        _tempControl.setSensor(&_ds18b20Sensor);
+        ESP_LOGI(TAG, "Temperature sensor backend: DS18B20");
+    }
     _tempControl.begin();
     ESP_LOGI(TAG, "Temperature sensor initialized");
 
@@ -195,8 +210,7 @@ void MoaMainUnit::initHardware() {
 }
 
 void MoaMainUnit::applyConfiguration() {
-    // Load settings from NVS (falls back to Constants.h defaults)
-    _config.begin();
+    // NVS settings were already loaded in begin() before initHardware()
     _wifiManager.setCredentials(_config.wifiSsid, _config.wifiPassword);
     _otaManager.setHostname(_config.otaHostname);
 

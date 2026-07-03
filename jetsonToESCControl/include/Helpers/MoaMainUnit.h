@@ -23,6 +23,8 @@
 
 #include "MoaMcpDevice.h"
 #include "MoaTempControl.h"
+#include "NtcTemperatureSensor.h"
+#include "Ds18b20TemperatureSensor.h"
 #include "MoaBattControl.h"
 #include "MoaCurrentControl.h"
 #include "MoaButtonControl.h"
@@ -206,6 +208,8 @@ private:
 
     // === Hardware instances ===
     MoaMcpDevice _mcpDevice;
+    NtcTemperatureSensor _ntcSensor;
+    Ds18b20TemperatureSensor _ds18b20Sensor;
     MoaTempControl _tempControl;
     MoaBattControl _battControl;
     MoaCurrentControl _currentControl;

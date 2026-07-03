@@ -121,6 +121,41 @@
  */
 #define TEMP_AVERAGING_SAMPLES  5
 
+/**
+ * @brief Default temperature sensor type (0 = DS18B20, 1 = NTC)
+ * @note Must stay DS18B20 (0) — see TempSensorType in ConfigManager.h
+ */
+#define TEMP_SENSOR_TYPE_DEFAULT  0
+
+// =============================================================================
+// NTC Thermistor Constants (used when TempSensorType::NTC is selected)
+// =============================================================================
+
+/**
+ * @brief NTC series (reference) resistor value in ohms
+ */
+#define NTC_REFERENCE_RESISTANCE   10000.0f
+
+/**
+ * @brief NTC nominal resistance in ohms (at nominal temperature)
+ */
+#define NTC_NOMINAL_RESISTANCE     10000.0f
+
+/**
+ * @brief NTC nominal temperature in Celsius
+ */
+#define NTC_NOMINAL_TEMP_C         25.0f
+
+/**
+ * @brief NTC Beta coefficient
+ */
+#define NTC_BETA_COEFFICIENT       3950.0f
+
+/**
+ * @brief ADC reference voltage in millivolts (ESP32-C3, 3.3V supply)
+ */
+#define NTC_ADC_VREF_MV            3300
+
 // =============================================================================
 // Button Configuration
 // =============================================================================

@@ -45,6 +45,7 @@ void ConfigManager::loadDefaults() {
     // Temperature
     tempTarget      = TEMP_THRESHOLD_TARGET;
     tempHysteresis  = TEMP_HYSTERESIS;
+    tempSensorType  = static_cast<TempSensorType>(TEMP_SENSOR_TYPE_DEFAULT);
 
     // Current
     currentOvercurrent = CURRENT_THRESHOLD_OVERCURRENT;
@@ -92,6 +93,7 @@ void ConfigManager::begin() {
     // Temperature
     tempTarget       = prefs.getFloat("temp_tgt",    TEMP_THRESHOLD_TARGET);
     tempHysteresis   = prefs.getFloat("temp_hyst",   TEMP_HYSTERESIS);
+    tempSensorType   = static_cast<TempSensorType>(prefs.getUChar("temp_sens", TEMP_SENSOR_TYPE_DEFAULT));
 
     // Current
     currentOvercurrent = prefs.getFloat("curr_oc",   CURRENT_THRESHOLD_OVERCURRENT);
@@ -113,7 +115,8 @@ void ConfigManager::begin() {
 
     ESP_LOGI(TAG, "Settings loaded from NVS");
     ESP_LOGD(TAG, "  Batt: high=%.2fV, med=%.2fV, low=%.2fV, stop=%.2fV, hyst=%.2fV", battHigh, battMedium, battLow, battStop, battHysteresis);
-    ESP_LOGD(TAG, "  Temp: target=%.1fC, hyst=%.1fC", tempTarget, tempHysteresis);
+    ESP_LOGD(TAG, "  Temp: target=%.1fC, hyst=%.1fC, sensor=%s", tempTarget, tempHysteresis,
+             tempSensorType == TempSensorType::NTC ? "NTC" : "DS18B20");
     ESP_LOGD(TAG, "  Current: OC=%.1fA, rev=%.1fA, hyst=%.1fA", currentOvercurrent, currentReverse, currentHysteresis);
     ESP_LOGD(TAG, "  WiFi: SSID=%s, host=%s", wifiSsid, otaHostname);
     ESP_LOGD(TAG, "  ESC: eco=%u, paddle=%u, break=%u, full=%u, after_full=%u, ramp=%.1f%%/s",
@@ -156,6 +159,7 @@ bool ConfigManager::save() {
     // Temperature
     ok &= (prefs.putFloat("temp_tgt",    tempTarget)       > 0);
     ok &= (prefs.putFloat("temp_hyst",   tempHysteresis)   > 0);
+    ok &= (prefs.putUChar("temp_sens",   static_cast<uint8_t>(tempSensorType)) > 0);
 
     // Current
     ok &= (prefs.putFloat("curr_oc",     currentOvercurrent) > 0);
