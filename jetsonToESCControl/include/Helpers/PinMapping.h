@@ -138,22 +138,22 @@
 /**
  * @brief Battery low LED on MCP23018 Port B
  */
-#define MCP_PIN_LED_BATT_LOW    1   // GPB1
+#define MCP_PIN_LED_BATT_LOW    4   // GPB1
 
 /**
  * @brief Battery medium LED on MCP23018 Port B
  */
-#define MCP_PIN_LED_BATT_MED    2   // GPB2
+#define MCP_PIN_LED_BATT_MED    3   // GPB2
 
 /**
  * @brief Battery high LED on MCP23018 Port B
  */
-#define MCP_PIN_LED_BATT_HI     3   // GPB3
+#define MCP_PIN_LED_BATT_HI     2   // GPB3
 
 /**
  * @brief Overcurrent warning LED on MCP23018 Port B
  */
-#define MCP_PIN_LED_OVERCURRENT 4   // GPB4
+#define MCP_PIN_LED_OVERCURRENT 1   // GPB4
 
 /**
  * @brief Bitmask of all LED pins on Port B
